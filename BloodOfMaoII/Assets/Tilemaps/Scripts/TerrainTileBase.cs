@@ -8,9 +8,9 @@ namespace AtomosZ.BoMII.Terrain
 	public class TerrainTileBase : Tile
 	{
 		public enum CardinalTiles { NE, N, NW, SW, S, SE };
-		public enum TerrainType { NotSet = -100, DeepWater = -50, Water = 1, Plains = 5, Hills = 9, Mountains = 14 };
+		//public enum TerrainType { NotSet = -100, DeepWater = -50, Water = 1, Grass = 5, Trees, Hills = 9, Mountains = 14 };
 
-		public TerrainType terrainType = TerrainType.NotSet;
+		//public TerrainType terrainType = TerrainType.NotSet;
 
 		private Tilemap tilemap;
 

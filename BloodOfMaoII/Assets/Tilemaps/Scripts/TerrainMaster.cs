@@ -8,21 +8,91 @@ namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainMaster : MonoBehaviour
 	{
-		public Tilemap tilemap;
-		public TerrainTileBase tilebase;
-		public GenesisTile genesis;
-		public TerrainTile terrainSpawnerPrefab;
-		public SpawnTile spawnTilePrefab;
-		public BoundsInt mapBounds;
-		public Vector3 cellsize;
+		public enum DrawMode { NoiseMap, ColorMap };
+		private enum TerrainIndex { Grass, Trees, Hills, Mountain, Water }
+
+		public DrawMode drawMode;
+		public bool autoUpdate = true;
+
+		[SerializeField] private Tilemap tilemap = null;
+		[SerializeField] private GenesisTile genesis = null;
+		[SerializeField] private SpawnTile spawnTilePrefab = null;
+		[SerializeField] private TerrainTileBase[] terrainTiles = null;
+		[SerializeField] private int mapWidth, mapHeight;
+		[SerializeField] private float noiseScale = 1;
+		[SerializeField] private int octaves = 1;
+		[Range(0, 1)]
+		[SerializeField] private float persistance = 1;
+		[SerializeField] private float lacunarity = 1;
+		[SerializeField] private int seed = 1;
+		[SerializeField] private Vector2 offset;
+
+		[SerializeField] private TerrainType[] regions = null;
+
+
 		private Camera cam;
+		private Vector3 cellsize;
 
 
 		public void Start()
 		{
 			cam = Camera.main;
-			mapBounds = tilemap.cellBounds;
 			cellsize = tilemap.cellSize;
+			GenerateMap();
+		}
+
+		public void GenerateMap()
+		{
+			// calculate the offsets based on the tile position
+			float[,] noiseMap = Noise.GenerateNoiseMap(
+				mapWidth, mapHeight, seed, noiseScale,
+				octaves, persistance, lacunarity, offset);
+
+			Color[] colorMap = new Color[mapWidth * mapHeight];
+			for (int y = 0; y < mapHeight; ++y)
+			{
+				for (int x = 0; x < mapWidth; ++x)
+				{
+					float currentHeight = noiseMap[x, y];
+					for (int i = 0; i < regions.Length; ++i)
+					{
+						if (currentHeight <= regions[i].height)
+						{
+							colorMap[y * mapWidth + x] = regions[i].color;
+							break;
+						}
+					}
+				}
+			}
+
+			MapDisplay display = GetComponent<MapDisplay>();
+			switch (drawMode)
+			{
+				case DrawMode.NoiseMap:
+					display.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
+					break;
+				case DrawMode.ColorMap:
+					display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
+					break;
+			}
+
+
+			// generate a heightMap using noise
+			//Texture2D tileTexture = BuildTexture(heightMap);
+			//sprite.sprite = Sprite.Create(tileTexture,
+			//	new Rect(transform.position, new Vector2(tileTexture.width, tileTexture.height)), Vector2.zero);
+		}
+
+		public void OnValidate()
+		{
+			if (mapWidth < 1)
+				mapWidth = 1;
+			if (mapHeight < 1)
+				mapHeight = 1;
+			if (lacunarity < 1)
+				lacunarity = 1;
+			if (octaves < 0)
+				octaves = 1;
 		}
 
 		public void Update()
@@ -33,26 +103,22 @@ namespace AtomosZ.BoMII.Terrain
 			if (tile != null)
 			{
 				genesis.SetEnabled(false);
-				if (Input.GetMouseButtonDown(0))
-				{
-					Debug.Log(tilepoint);
-				}
 			}
 			else
 			{
 				genesis.SetEnabled(true);
 				if (Input.GetMouseButtonDown(0))
 				{
-					//TerrainTile spawner = Instantiate(terrainSpawnerPrefab, genesis.transform.position, Quaternion.identity, this.transform);
-					//tilemap.SetTile(tilemap.LocalToCell(genesis.transform.position), tilebase);
-					//spawner.StartSpawnTiles(1);
-					RevealArea(cam.ScreenToWorldPoint(Input.mousePosition), 3);
+					RevealArea(cam.ScreenToWorldPoint(Input.mousePosition), 5);
 				}
 			}
 		}
 
+
+
+
 		/// <summary>
-		/// WorldPos should be (unclamped) world position, radius how many tiles from center
+		/// WorldPos should be (optionally unclamped) world position, radius how many tiles from center
 		/// is revealed (0 == only center tile, 1 == 7 tiles total)
 		/// </summary>
 		/// <param name="worldPos"></param>
@@ -88,9 +154,11 @@ namespace AtomosZ.BoMII.Terrain
 				}
 				else
 				{
-					spawner.SpawnSelf(tilemap, tilebase);
+					spawner.SpawnSelf(tilemap, terrainTiles[UnityEngine.Random.Range(0, 2)]);
 				}
 			}
+
+			//StartCoroutine(StartSimulation(spawners, mappos));
 		}
 
 
@@ -124,6 +192,19 @@ namespace AtomosZ.BoMII.Terrain
 
 			return newSpawners;
 		}
+
+
+		//private IEnumerator StartSimulation(List<SpawnTile> spawners, Vector3Int mappos)
+		//{
+		//	while (simulate)
+		//	{
+		//		foreach (SpawnTile tile in spawners)
+		//		{
+
+		//		}
+		//	}
+		//}
+
 
 		private Vector3 GetWorldOfTileAt(CardinalTiles direction, Vector3 worldpos)
 		{

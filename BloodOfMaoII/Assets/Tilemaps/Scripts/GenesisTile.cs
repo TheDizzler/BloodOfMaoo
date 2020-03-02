@@ -14,10 +14,6 @@ namespace AtomosZ.BoMII.Terrain
 			sprite = GetComponent<SpriteRenderer>();
 		}
 
-		//public void Update()
-		//{
-			
-		//}
 
 		public void SetEnabled(bool isEnabled)
 		{

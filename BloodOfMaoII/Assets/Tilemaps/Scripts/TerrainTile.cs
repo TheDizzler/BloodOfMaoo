@@ -1,16 +1,17 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+
 
 namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainTile : MonoBehaviour
 	{
 		public enum CardinalTiles { NE, N, NW, SW, S, SE };
-		public enum TerrainType { NotSet = -100, DeepWater = -50, Water = 1, Grass = 5, Hills = 9, Mountains = 14 };
 
-		public TerrainType terrainType = TerrainType.NotSet;
+		//public TerrainType terrainType = TerrainType.NotSet;
 		[SerializeField] private TerrainTileBase tileBase = null;
 		private SpawnTile[] spawnTiles = new SpawnTile[6];
 		private Tilemap tilemap;
@@ -98,5 +99,13 @@ namespace AtomosZ.BoMII.Terrain
 			spawning = null;
 			Destroy(this.gameObject);
 		}
+	}
+
+	[Serializable]
+	public struct TerrainType
+	{
+		public string name;
+		public float height;
+		public Color color;
 	}
 }
