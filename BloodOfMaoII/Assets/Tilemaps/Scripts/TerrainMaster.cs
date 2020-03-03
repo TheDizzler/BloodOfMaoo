@@ -12,15 +12,21 @@ namespace AtomosZ.BoMII.Terrain
 	{
 		public enum DrawMode { NoiseMap, ColorMap, Mesh, HexGrid };
 		//private enum TerrainIndex {DeepWater, Water = 10, Sand = 20, Grass = 30, Hills = 60, Mountain = 75, Ice = 90 }
+		public const int mapChunkSize = 241;
+		[Range(0,6)]
+		[SerializeField] private int levelOfDetail = 1;
 
 		public DrawMode drawMode;
 		public bool autoUpdate = true;
 
+		// tilemap related variables
 		public Tilemap tilemap = null;
 		[SerializeField] private GenesisTile genesis = null;
 		[SerializeField] private SpawnTile spawnTilePrefab = null;
 		[SerializeField] private TerrainTileBase[] terrainTiles = null;
-		[SerializeField] private int mapWidth, mapHeight;
+		
+		// noise map gen related variables
+		//[SerializeField] private int mapChunkSize, mapChunkSize;
 		[SerializeField] private float noiseScale = 1;
 		[Range(1, 126)]
 		[SerializeField] private int octaves = 1;
@@ -29,6 +35,8 @@ namespace AtomosZ.BoMII.Terrain
 		[SerializeField] private float lacunarity = 1;
 		[SerializeField] private int seed = 1;
 		[SerializeField] private Vector2 offset = new Vector2();
+		[SerializeField] private float meshHeighMultiplier = 1;
+		[SerializeField] private AnimationCurve heightMapCurve = null;
 
 		[SerializeField] private TerrainType[] regions = null;
 
@@ -48,25 +56,25 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			// calculate the offsets based on the tile position
 			float[,] noiseMap = Noise.GenerateNoiseMap(
-				mapWidth, mapHeight, seed, noiseScale,
+				mapChunkSize, mapChunkSize, seed, noiseScale,
 				octaves, persistance, lacunarity, offset);
 
-			tilemap.ClearAllTiles();
-			int halfMapWidth = mapWidth / 2;
-			int halfMapHeight = mapHeight / 2;
+			//tilemap.ClearAllTiles();
+			//int halfMapWidth = mapChunkSize / 2;
+			//int halfMapHeight = mapChunkSize / 2;
 
-			Color[] colorMap = new Color[mapWidth * mapHeight];
-			for (int y = 0; y < mapHeight; ++y)
+			Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
+			for (int y = 0; y < mapChunkSize; ++y)
 			{
-				for (int x = 0; x < mapWidth; ++x)
+				for (int x = 0; x < mapChunkSize; ++x)
 				{
 					float currentHeight = noiseMap[x, y];
 					for (int i = 0; i < regions.Length; ++i)
 					{
 						if (currentHeight <= regions[i].height)
 						{
-							colorMap[y * mapWidth + x] = regions[i].color;
-							tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
+							colorMap[y * mapChunkSize + x] = regions[i].color;
+							//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
 							break;
 						}
 					}
@@ -80,11 +88,11 @@ namespace AtomosZ.BoMII.Terrain
 					display.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
 					break;
 				case DrawMode.ColorMap:
-					display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
+					display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
 					break;
 				case DrawMode.Mesh:
-					display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap),
-						TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
+					display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeighMultiplier, heightMapCurve, levelOfDetail),
+						TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
 					break;
 				case DrawMode.HexGrid:
 					
@@ -94,13 +102,8 @@ namespace AtomosZ.BoMII.Terrain
 
 		public void OnValidate()
 		{
-			if (mapWidth < 1)
-				mapWidth = 1;
-			if (mapHeight < 1)
-				mapHeight = 1;
 			if (lacunarity < 1)
 				lacunarity = 1;
-
 		}
 
 		public void Update()

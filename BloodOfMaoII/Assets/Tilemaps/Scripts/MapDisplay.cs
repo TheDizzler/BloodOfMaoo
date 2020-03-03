@@ -2,7 +2,7 @@
 using AtomosZ.BoMII.Terrain.Generators;
 using UnityEngine;
 
-namespace AtomosZ.BoMII.Terrain
+namespace AtomosZ.BoMII.Terrain.Generators
 {
 	public class MapDisplay : MonoBehaviour
 	{
