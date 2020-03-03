@@ -12,11 +12,15 @@ namespace AtomosZ.BoMII.Terrain.Editors
 			TerrainMaster mapGen = (TerrainMaster)target;
 			if (GUILayout.Button("Generate"))
 				mapGen.GenerateMap();
+			if (GUILayout.Button("Clear Tile Map"))
+				mapGen.tilemap.ClearAllTiles();
 
 			if (DrawDefaultInspector() && mapGen.autoUpdate)
 			{
 				mapGen.GenerateMap();
 			}
+
+			
 		}
 	}
 }

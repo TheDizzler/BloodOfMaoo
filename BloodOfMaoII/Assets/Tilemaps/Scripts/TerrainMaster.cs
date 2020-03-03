@@ -1,31 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using AtomosZ.BoMII.Terrain.Generators;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using static AtomosZ.BoMII.Terrain.TerrainTile;
+
 
 namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainMaster : MonoBehaviour
 	{
-		public enum DrawMode { NoiseMap, ColorMap };
-		private enum TerrainIndex { Grass, Trees, Hills, Mountain, Water }
+		public enum DrawMode { NoiseMap, ColorMap, Mesh, HexGrid };
+		//private enum TerrainIndex {DeepWater, Water = 10, Sand = 20, Grass = 30, Hills = 60, Mountain = 75, Ice = 90 }
 
 		public DrawMode drawMode;
 		public bool autoUpdate = true;
 
-		[SerializeField] private Tilemap tilemap = null;
+		public Tilemap tilemap = null;
 		[SerializeField] private GenesisTile genesis = null;
 		[SerializeField] private SpawnTile spawnTilePrefab = null;
 		[SerializeField] private TerrainTileBase[] terrainTiles = null;
 		[SerializeField] private int mapWidth, mapHeight;
 		[SerializeField] private float noiseScale = 1;
+		[Range(1, 126)]
 		[SerializeField] private int octaves = 1;
 		[Range(0, 1)]
 		[SerializeField] private float persistance = 1;
 		[SerializeField] private float lacunarity = 1;
 		[SerializeField] private int seed = 1;
-		[SerializeField] private Vector2 offset;
+		[SerializeField] private Vector2 offset = new Vector2();
 
 		[SerializeField] private TerrainType[] regions = null;
 
@@ -48,6 +51,10 @@ namespace AtomosZ.BoMII.Terrain
 				mapWidth, mapHeight, seed, noiseScale,
 				octaves, persistance, lacunarity, offset);
 
+			tilemap.ClearAllTiles();
+			int halfMapWidth = mapWidth / 2;
+			int halfMapHeight = mapHeight / 2;
+
 			Color[] colorMap = new Color[mapWidth * mapHeight];
 			for (int y = 0; y < mapHeight; ++y)
 			{
@@ -59,6 +66,7 @@ namespace AtomosZ.BoMII.Terrain
 						if (currentHeight <= regions[i].height)
 						{
 							colorMap[y * mapWidth + x] = regions[i].color;
+							tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
 							break;
 						}
 					}
@@ -74,13 +82,14 @@ namespace AtomosZ.BoMII.Terrain
 				case DrawMode.ColorMap:
 					display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
 					break;
+				case DrawMode.Mesh:
+					display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap),
+						TextureGenerator.TextureFromColorMap(colorMap, mapWidth, mapHeight));
+					break;
+				case DrawMode.HexGrid:
+					
+					break;
 			}
-
-
-			// generate a heightMap using noise
-			//Texture2D tileTexture = BuildTexture(heightMap);
-			//sprite.sprite = Sprite.Create(tileTexture,
-			//	new Rect(transform.position, new Vector2(tileTexture.width, tileTexture.height)), Vector2.zero);
 		}
 
 		public void OnValidate()
@@ -91,8 +100,7 @@ namespace AtomosZ.BoMII.Terrain
 				mapHeight = 1;
 			if (lacunarity < 1)
 				lacunarity = 1;
-			if (octaves < 0)
-				octaves = 1;
+
 		}
 
 		public void Update()
@@ -129,6 +137,8 @@ namespace AtomosZ.BoMII.Terrain
 			worldPos = tilemap.CellToWorld(mappos);
 			List<SpawnTile> spawners = new List<SpawnTile>();
 			spawners.Add(Instantiate(spawnTilePrefab, worldPos, Quaternion.identity, this.transform));
+
+
 
 			int r = 0;
 			if (r < radius)

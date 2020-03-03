@@ -1,12 +1,27 @@
-﻿using UnityEngine;
+﻿using System;
+using AtomosZ.BoMII.Terrain.Generators;
+using UnityEngine;
 
-public class MapDisplay : MonoBehaviour
+namespace AtomosZ.BoMII.Terrain
 {
-	[SerializeField] private Renderer textureRenderer = null;
-
-	public void DrawTexture(Texture2D texture)
+	public class MapDisplay : MonoBehaviour
 	{
-		textureRenderer.sharedMaterial.mainTexture = texture;
-		textureRenderer.transform.localScale = new Vector3(texture.width, 1, texture.height);
+		public float noiseMapToGridScale = .25f;
+		[SerializeField] private MeshFilter meshFilter = null;
+		[SerializeField] private MeshRenderer meshRenderer = null;
+		[SerializeField] private Renderer textureRenderer = null;
+
+
+		public void DrawTexture(Texture2D texture)
+		{
+			textureRenderer.sharedMaterial.mainTexture = texture;
+			textureRenderer.transform.localScale = new Vector3(texture.width, 1, texture.height);
+		}
+
+		public void DrawMesh(MeshData meshData, Texture2D texture)
+		{
+			meshFilter.sharedMesh = meshData.CreateMesh();
+			meshRenderer.sharedMaterial.mainTexture = texture;
+		}
 	}
 }
