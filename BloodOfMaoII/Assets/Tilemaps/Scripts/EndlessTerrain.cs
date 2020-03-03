@@ -20,7 +20,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 		public void Start()
 		{
-			chunkSize = TerrainMaster.mapChunkSize - 1;
+			chunkSize = MapGenerator.mapChunkSize - 1;
 			chunksVisibleInViewDist = Mathf.RoundToInt(maxViewDist / chunkSize);
 		}
 
@@ -81,7 +81,6 @@ namespace AtomosZ.BoMII.Terrain.Generators
 				meshObject = GameObject.CreatePrimitive(PrimitiveType.Plane);
 				meshObject.transform.parent = parent;
 				meshObject.transform.position = posV3;
-				meshObject.transform.eulerAngles = new Vector3(-90, 0, 0);
 				meshObject.transform.localScale = Vector3.one * size / 10f;
 				SetVisible(false);
 			}

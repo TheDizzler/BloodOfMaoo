@@ -10,36 +10,12 @@ namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainMaster : MonoBehaviour
 	{
-		public enum DrawMode { NoiseMap, ColorMap, Mesh, HexGrid };
-		//private enum TerrainIndex {DeepWater, Water = 10, Sand = 20, Grass = 30, Hills = 60, Mountain = 75, Ice = 90 }
-		public const int mapChunkSize = 241;
-		[Range(0,6)]
-		[SerializeField] private int levelOfDetail = 1;
-
-		public DrawMode drawMode;
-		public bool autoUpdate = true;
-
+		[SerializeField] private MapGenerator mapGenerator = null;
 		// tilemap related variables
 		public Tilemap tilemap = null;
 		[SerializeField] private GenesisTile genesis = null;
 		[SerializeField] private SpawnTile spawnTilePrefab = null;
 		[SerializeField] private TerrainTileBase[] terrainTiles = null;
-		
-		// noise map gen related variables
-		//[SerializeField] private int mapChunkSize, mapChunkSize;
-		[SerializeField] private float noiseScale = 1;
-		[Range(1, 126)]
-		[SerializeField] private int octaves = 1;
-		[Range(0, 1)]
-		[SerializeField] private float persistance = 1;
-		[SerializeField] private float lacunarity = 1;
-		[SerializeField] private int seed = 1;
-		[SerializeField] private Vector2 offset = new Vector2();
-		[SerializeField] private float meshHeighMultiplier = 1;
-		[SerializeField] private AnimationCurve heightMapCurve = null;
-
-		[SerializeField] private TerrainType[] regions = null;
-
 
 		private Camera cam;
 		private Vector3 cellsize;
@@ -49,80 +25,44 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			cam = Camera.main;
 			cellsize = tilemap.cellSize;
-			GenerateMap();
+			mapGenerator.GenerateMap();
 		}
 
-		public void GenerateMap()
-		{
-			// calculate the offsets based on the tile position
-			float[,] noiseMap = Noise.GenerateNoiseMap(
-				mapChunkSize, mapChunkSize, seed, noiseScale,
-				octaves, persistance, lacunarity, offset);
 
-			//tilemap.ClearAllTiles();
-			//int halfMapWidth = mapChunkSize / 2;
-			//int halfMapHeight = mapChunkSize / 2;
 
-			Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
-			for (int y = 0; y < mapChunkSize; ++y)
-			{
-				for (int x = 0; x < mapChunkSize; ++x)
-				{
-					float currentHeight = noiseMap[x, y];
-					for (int i = 0; i < regions.Length; ++i)
-					{
-						if (currentHeight <= regions[i].height)
-						{
-							colorMap[y * mapChunkSize + x] = regions[i].color;
-							//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
-							break;
-						}
-					}
-				}
-			}
-
-			MapDisplay display = GetComponent<MapDisplay>();
-			switch (drawMode)
-			{
-				case DrawMode.NoiseMap:
-					display.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
-					break;
-				case DrawMode.ColorMap:
-					display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
-					break;
-				case DrawMode.Mesh:
-					display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeighMultiplier, heightMapCurve, levelOfDetail),
-						TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
-					break;
-				case DrawMode.HexGrid:
-					
-					break;
-			}
-		}
-
-		public void OnValidate()
-		{
-			if (lacunarity < 1)
-				lacunarity = 1;
-		}
 
 		public void Update()
 		{
-			Vector3Int tilepoint = tilemap.WorldToCell(cam.ScreenToWorldPoint(Input.mousePosition));
-			genesis.transform.position = tilemap.CellToWorld(tilepoint); // lock it to grid
-			TileBase tile = tilemap.GetTile(tilepoint);
-			if (tile != null)
+			Vector3 mousepos = Input.mousePosition;
+			Ray ray = cam.ScreenPointToRay(mousepos);
+			var plane = new Plane(Vector3.back, Vector3.zero);
+			if (plane.Raycast(ray, out float hitDist))
 			{
-				genesis.SetEnabled(false);
-			}
-			else
-			{
-				genesis.SetEnabled(true);
-				if (Input.GetMouseButtonDown(0))
+				genesis.Disable(false);
+				var worldpoint = ray.GetPoint(hitDist);
+				var tilepoint = tilemap.WorldToCell(worldpoint);
+				// lock it to grid
+				genesis.transform.position = tilemap.CellToWorld(tilepoint);
+
+				TileBase tile = tilemap.GetTile(tilepoint);
+				if (tile != null)
 				{
-					RevealArea(cam.ScreenToWorldPoint(Input.mousePosition), 5);
+					genesis.SetTileValid(false);
+					if (Input.GetMouseButtonDown(0))
+						Debug.Log(tilepoint);
+				}
+				else
+				{
+					genesis.SetTileValid(true);
+					if (Input.GetMouseButtonDown(0))
+					{
+						Debug.Log(tilepoint);
+						RevealArea(worldpoint, 5);
+					}
 				}
 			}
+			else
+				genesis.Disable(true);
 		}
 
 

@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace AtomosZ.BoMII.Terrain
 {
@@ -15,7 +14,7 @@ namespace AtomosZ.BoMII.Terrain
 		}
 
 
-		public void SetEnabled(bool isEnabled)
+		public void SetTileValid(bool isEnabled)
 		{
 			if (isEnabled)
 			{
@@ -25,6 +24,11 @@ namespace AtomosZ.BoMII.Terrain
 			{
 				sprite.color = NGColor;
 			}
+		}
+
+		public void Disable(bool isDisabled)
+		{
+			sprite.enabled = !isDisabled;
 		}
 	}
 }

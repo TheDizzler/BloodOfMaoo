@@ -6,7 +6,6 @@ namespace AtomosZ.BoMII.Terrain.Generators
 {
 	public class MapDisplay : MonoBehaviour
 	{
-		public float noiseMapToGridScale = .25f;
 		[SerializeField] private MeshFilter meshFilter = null;
 		[SerializeField] private MeshRenderer meshRenderer = null;
 		[SerializeField] private Renderer textureRenderer = null;

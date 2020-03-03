@@ -11,5 +11,7 @@
 	public static class Layers
 	{
 		public static string SpawnPoints = "TileGeneratorSpawnPoint";
+
+		public static string Tilemap = "Tilemap";
 	}
 }
