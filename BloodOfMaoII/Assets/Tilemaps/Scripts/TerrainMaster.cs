@@ -25,7 +25,7 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			cam = Camera.main;
 			cellsize = tilemap.cellSize;
-			mapGenerator.DrawMapInEditor();
+			//mapGenerator.DrawMapInEditor();
 		}
 
 

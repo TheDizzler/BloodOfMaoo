@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-
+using static AtomosZ.BoMII.Terrain.Generators.Noise;
 
 namespace AtomosZ.BoMII.Terrain.Generators
 {
@@ -12,15 +12,16 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 		public const int mapChunkSize = 241;
 
+		public NormalizeMode normalizeMode;
 		public DrawMode drawMode;
+
 		public bool autoUpdate = true;
 
 		[Range(0, 6)]
-		[SerializeField] private int levelOfDetail = 1;
-		// noise map gen related variables
-		//[SerializeField] private int mapChunkSize, mapChunkSize;
+		[SerializeField] private int editorPrefiewLevelOfDetail = 0;
+		[Range(1, 100)]
 		[SerializeField] private float noiseScale = 1;
-		[Range(1, 126)]
+		[Range(1, 60)]
 		[SerializeField] private int octaves = 1;
 		[Range(0, 1)]
 		[SerializeField] private float persistance = 1;
@@ -37,48 +38,36 @@ namespace AtomosZ.BoMII.Terrain.Generators
 #if UNITY_EDITOR
 		public void DrawMapInEditor()
 		{
-			MapData mapData = GenerateMapData();
-			MapDisplay display = GetComponent<MapDisplay>();
-			switch (drawMode)
+			if (Application.isPlaying)
 			{
-				case DrawMode.NoiseMap:
-					display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
-					break;
-				case DrawMode.ColorMap:
-					display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
-					break;
-				case DrawMode.Mesh:
-					display.DrawMesh(
-						MeshGenerator.GenerateTerrainMesh(
-							mapData.heightMap, meshHeighMultiplier, heightMapCurve, levelOfDetail),
-						TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
-					break;
-				case DrawMode.HexGrid:
+				GetComponent<EndlessTerrain>().RefreshMap();
+			}
+			else
+			{
+				MapData mapData = GenerateMapData(Vector2.zero);
+				MapDisplay display = GetComponent<MapDisplay>();
+				switch (drawMode)
+				{
+					case DrawMode.NoiseMap:
+						display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
+						break;
+					case DrawMode.ColorMap:
+						display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+						break;
+					case DrawMode.Mesh:
+						display.DrawMesh(
+							MeshGenerator.GenerateTerrainMesh(
+								mapData.heightMap, meshHeighMultiplier, heightMapCurve, editorPrefiewLevelOfDetail),
+							TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+						break;
+					case DrawMode.HexGrid:
 
-					break;
+						break;
+				}
 			}
 		}
 #endif
 
-		public void RequestMapData(Action<MapData> callback)
-		{
-			ThreadStart threadStart = delegate
-			{
-				MapDataThread(callback);
-			};
-
-			new Thread(threadStart).Start();
-		}
-
-		public void RequestMeshData(MapData mapData, Action<MeshData> callback)
-		{
-			ThreadStart threadStart = delegate
-			{
-				MeshDataThread(mapData, callback);
-			};
-
-			new Thread(threadStart).Start();
-		}
 
 		public void Update()
 		{
@@ -92,7 +81,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			}
 
 			if (meshDataThreadInfoQueue.Count > 0)
-				{
+			{
 				for (int i = 0; i < meshDataThreadInfoQueue.Count; ++i)
 				{
 					MapThreadInfo<MeshData> threadInfo = meshDataThreadInfoQueue.Dequeue();
@@ -101,31 +90,54 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			}
 		}
 
-		private void MapDataThread(Action<MapData> callback)
+		public void RequestMapData(Vector2 center, Action<MapData> callback)
 		{
-			MapData mapData = GenerateMapData();
+			ThreadStart threadStart = delegate
+			{
+				MapDataThread(center, callback);
+			};
+
+			new Thread(threadStart).Start();
+		}
+
+		private void MapDataThread(Vector2 center, Action<MapData> callback)
+		{
+			MapData mapData = GenerateMapData(center);
 			lock (mapDataThreadInfoQueue)
 			{
 				mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));
 			}
 		}
 
-		private void MeshDataThread(MapData mapData, Action<MeshData> callback)
+		public void RequestMeshData(MapData mapData, int lod, Action<MeshData> callback)
+		{
+			ThreadStart threadStart = delegate
+			{
+				MeshDataThread(mapData, lod, callback);
+			};
+
+			new Thread(threadStart).Start();
+		}
+
+
+
+
+		private void MeshDataThread(MapData mapData, int lod, Action<MeshData> callback)
 		{
 			MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-				mapData.heightMap, meshHeighMultiplier, heightMapCurve, levelOfDetail);
+				mapData.heightMap, meshHeighMultiplier, heightMapCurve, lod);
 			lock (meshDataThreadInfoQueue)
 			{
 				meshDataThreadInfoQueue.Enqueue(new MapThreadInfo<MeshData>(callback, meshData));
 			}
 		}
 
-		private MapData GenerateMapData()
+		private MapData GenerateMapData(Vector2 center)
 		{
 			// calculate the offsets based on the tile position
 			float[,] noiseMap = Noise.GenerateNoiseMap(
 				mapChunkSize, mapChunkSize, seed, noiseScale,
-				octaves, persistance, lacunarity, offset);
+				octaves, persistance, lacunarity, center + offset, normalizeMode);
 
 			//tilemap.ClearAllTiles();
 			//int halfMapWidth = mapChunkSize / 2;
