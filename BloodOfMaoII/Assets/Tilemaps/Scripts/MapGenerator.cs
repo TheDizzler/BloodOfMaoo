@@ -1,5 +1,8 @@
-﻿using UnityEngine;
-using UnityEngine.Tilemaps;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
+using UnityEngine;
+
 
 namespace AtomosZ.BoMII.Terrain.Generators
 {
@@ -8,7 +11,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		public enum DrawMode { NoiseMap, ColorMap, Mesh, HexGrid };
 
 		public const int mapChunkSize = 241;
-		
+
 		public DrawMode drawMode;
 		public bool autoUpdate = true;
 
@@ -28,8 +31,96 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		[SerializeField] private AnimationCurve heightMapCurve = null;
 		[SerializeField] private TerrainType[] regions = null;
 
+		private Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
+		private Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
-		public void GenerateMap()
+#if UNITY_EDITOR
+		public void DrawMapInEditor()
+		{
+			MapData mapData = GenerateMapData();
+			MapDisplay display = GetComponent<MapDisplay>();
+			switch (drawMode)
+			{
+				case DrawMode.NoiseMap:
+					display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
+					break;
+				case DrawMode.ColorMap:
+					display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+					break;
+				case DrawMode.Mesh:
+					display.DrawMesh(
+						MeshGenerator.GenerateTerrainMesh(
+							mapData.heightMap, meshHeighMultiplier, heightMapCurve, levelOfDetail),
+						TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+					break;
+				case DrawMode.HexGrid:
+
+					break;
+			}
+		}
+#endif
+
+		public void RequestMapData(Action<MapData> callback)
+		{
+			ThreadStart threadStart = delegate
+			{
+				MapDataThread(callback);
+			};
+
+			new Thread(threadStart).Start();
+		}
+
+		public void RequestMeshData(MapData mapData, Action<MeshData> callback)
+		{
+			ThreadStart threadStart = delegate
+			{
+				MeshDataThread(mapData, callback);
+			};
+
+			new Thread(threadStart).Start();
+		}
+
+		public void Update()
+		{
+			if (mapDataThreadInfoQueue.Count > 0)
+			{
+				for (int i = 0; i < mapDataThreadInfoQueue.Count; ++i)
+				{
+					MapThreadInfo<MapData> threadInfo = mapDataThreadInfoQueue.Dequeue();
+					threadInfo.callback(threadInfo.parameter);
+				}
+			}
+
+			if (meshDataThreadInfoQueue.Count > 0)
+				{
+				for (int i = 0; i < meshDataThreadInfoQueue.Count; ++i)
+				{
+					MapThreadInfo<MeshData> threadInfo = meshDataThreadInfoQueue.Dequeue();
+					threadInfo.callback(threadInfo.parameter);
+				}
+			}
+		}
+
+		private void MapDataThread(Action<MapData> callback)
+		{
+			MapData mapData = GenerateMapData();
+			lock (mapDataThreadInfoQueue)
+			{
+				mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));
+			}
+		}
+
+		private void MeshDataThread(MapData mapData, Action<MeshData> callback)
+		{
+			MeshData meshData = MeshGenerator.GenerateTerrainMesh(
+				mapData.heightMap, meshHeighMultiplier, heightMapCurve, levelOfDetail);
+			lock (meshDataThreadInfoQueue)
+			{
+				meshDataThreadInfoQueue.Enqueue(new MapThreadInfo<MeshData>(callback, meshData));
+			}
+		}
+
+		private MapData GenerateMapData()
 		{
 			// calculate the offsets based on the tile position
 			float[,] noiseMap = Noise.GenerateNoiseMap(
@@ -58,23 +149,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 				}
 			}
 
-			MapDisplay display = GetComponent<MapDisplay>();
-			switch (drawMode)
-			{
-				case DrawMode.NoiseMap:
-					display.DrawTexture(TextureGenerator.TextureFromHeightMap(noiseMap));
-					break;
-				case DrawMode.ColorMap:
-					display.DrawTexture(TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
-					break;
-				case DrawMode.Mesh:
-					display.DrawMesh(MeshGenerator.GenerateTerrainMesh(noiseMap, meshHeighMultiplier, heightMapCurve, levelOfDetail),
-						TextureGenerator.TextureFromColorMap(colorMap, mapChunkSize, mapChunkSize));
-					break;
-				case DrawMode.HexGrid:
-
-					break;
-			}
+			return new MapData(noiseMap, colorMap);
 		}
 
 
@@ -84,5 +159,30 @@ namespace AtomosZ.BoMII.Terrain.Generators
 				lacunarity = 1;
 		}
 
+		private struct MapThreadInfo<T>
+		{
+			public readonly Action<T> callback;
+			public readonly T parameter;
+
+			public MapThreadInfo(Action<T> callback, T parameter)
+			{
+				this.callback = callback;
+				this.parameter = parameter;
+			}
+		}
+	}
+
+
+	public struct MapData
+	{
+		public float[,] heightMap;
+		public Color[] colorMap;
+
+
+		public MapData(float[,] heightMap, Color[] colorMap)
+		{
+			this.heightMap = heightMap;
+			this.colorMap = colorMap;
+		}
 	}
 }

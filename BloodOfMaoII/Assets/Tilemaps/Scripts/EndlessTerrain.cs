@@ -7,11 +7,13 @@ namespace AtomosZ.BoMII.Terrain.Generators
 	{
 		public const float maxViewDist = 225;
 		public static Vector2 viewerPosition;
-		
+		public static MapGenerator mapGenerator;
 
 		public Transform viewer;
 
 		[SerializeField] private Transform mapChunkParent = null;
+		[SerializeField] private Material mapMaterial = null;
+
 		private int chunkSize;
 		private int chunksVisibleInViewDist;
 		private Dictionary<Vector2, TerrainChunk> terrainChunkDic = new Dictionary<Vector2, TerrainChunk>();
@@ -22,6 +24,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		{
 			chunkSize = MapGenerator.mapChunkSize - 1;
 			chunksVisibleInViewDist = Mathf.RoundToInt(maxViewDist / chunkSize);
+			mapGenerator = FindObjectOfType<MapGenerator>();
 		}
 
 
@@ -57,7 +60,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 					}
 					else
 					{
-						TerrainChunk newChunk = new TerrainChunk(viewedChunkCoord, chunkSize, mapChunkParent);
+						TerrainChunk newChunk = new TerrainChunk(viewedChunkCoord, chunkSize, mapChunkParent, mapMaterial);
 						terrainChunkDic.Add(viewedChunkCoord, newChunk);
 						terrainChunksVisibleLastUpdate.Add(newChunk);
 					}
@@ -70,19 +73,26 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			private GameObject meshObject;
 			private Vector2 position;
 			private Bounds bounds;
+			private MeshRenderer meshRenderer;
+			private MeshFilter meshFilter;
 
-
-			public TerrainChunk(Vector2 coords, int size, Transform parent)
+			public TerrainChunk(Vector2 coords, int size, Transform parent, Material material)
 			{
 				position = coords * size;
 				bounds = new Bounds(position, Vector2.one * size);
-				Vector3 posV3 = new Vector3(position.x, position.y, 0);
+				Vector3 posV3 = new Vector3(position.x, 0, position.y);
 
-				meshObject = GameObject.CreatePrimitive(PrimitiveType.Plane);
-				meshObject.transform.parent = parent;
+				meshObject = new GameObject("Terrain Chunk " + position);
 				meshObject.transform.position = posV3;
-				meshObject.transform.localScale = Vector3.one * size / 10f;
+				meshObject.transform.SetParent(parent, false);
+				
+
+				meshRenderer = meshObject.AddComponent<MeshRenderer>();
+				meshRenderer.material = material;
+				meshFilter = meshObject.AddComponent<MeshFilter>();
 				SetVisible(false);
+
+				mapGenerator.RequestMapData(OnMapDataReceived);
 			}
 
 			public void UpdateTerrainChunk()
@@ -100,6 +110,16 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			public bool IsVisible()
 			{
 				return meshObject.activeSelf;
+			}
+
+			private void OnMapDataReceived(MapData mapData)
+			{
+				mapGenerator.RequestMeshData(mapData, OnMeshDataReceived);
+			}
+
+			private void OnMeshDataReceived(MeshData meshData)
+			{
+				meshFilter.mesh = meshData.CreateMesh();
 			}
 		}
 	}

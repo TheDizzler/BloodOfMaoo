@@ -12,12 +12,12 @@ namespace AtomosZ.BoMII.Terrain.Editors
 		{
 			MapGenerator mapGen = (MapGenerator)target;
 			if (GUILayout.Button("Generate"))
-				mapGen.GenerateMap();
+				mapGen.DrawMapInEditor();
 
 
 			if (DrawDefaultInspector() && mapGen.autoUpdate)
 			{
-				mapGen.GenerateMap();
+				mapGen.DrawMapInEditor();
 			}
 		}
 	}
