@@ -8,7 +8,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 {
 	public class MapGenerator : MonoBehaviour
 	{
-		public enum DrawMode { NoiseMap, ColorMap, Mesh, HexGrid };
+		public enum DrawMode { NoiseMap, ColorMap, Mesh, FalloffMap, HexGrid };
 
 		public const int mapChunkSize = 241;
 
@@ -16,6 +16,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		public DrawMode drawMode;
 
 		public bool autoUpdate = true;
+		public bool useFalloff;
 
 		[Range(0, 6)]
 		[SerializeField] private int editorPrefiewLevelOfDetail = 0;
@@ -32,12 +33,20 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		[SerializeField] private AnimationCurve heightMapCurve = null;
 		[SerializeField] private TerrainType[] regions = null;
 
+		private float[,] falloffMap;
+
 		private Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
 		private Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
+
+		public void Awake()
+		{
+			falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
+		}
 
 #if UNITY_EDITOR
 		public void DrawMapInEditor()
 		{
+			falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
 			if (Application.isPlaying)
 			{
 				GetComponent<EndlessTerrain>().RefreshMap();
@@ -59,6 +68,10 @@ namespace AtomosZ.BoMII.Terrain.Generators
 							MeshGenerator.GenerateTerrainMesh(
 								mapData.heightMap, meshHeighMultiplier, heightMapCurve, editorPrefiewLevelOfDetail),
 							TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+						break;
+					case DrawMode.FalloffMap:
+						display.DrawTexture(
+							TextureGenerator.TextureFromHeightMap(FalloffGenerator.GenerateFalloffMap(mapChunkSize)));
 						break;
 					case DrawMode.HexGrid:
 
@@ -148,12 +161,19 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			{
 				for (int x = 0; x < mapChunkSize; ++x)
 				{
+					if (useFalloff)
+					{
+						noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
+					}
 					float currentHeight = noiseMap[x, y];
 					for (int i = 0; i < regions.Length; ++i)
 					{
-						if (currentHeight <= regions[i].height)
+						if (currentHeight >= regions[i].height)
 						{
 							colorMap[y * mapChunkSize + x] = regions[i].color;
+						}
+						else
+						{
 							//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
 							break;
 						}

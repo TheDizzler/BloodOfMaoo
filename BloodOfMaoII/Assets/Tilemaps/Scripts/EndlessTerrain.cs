@@ -6,6 +6,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 {
 	public class EndlessTerrain : MonoBehaviour
 	{
+		public const float scale = .25f;
 		public const float viewerMoveThresholdForChunkUpdate = 25f;
 		public const float sqrViewerMoveThresholdForChunkUpdate
 			= viewerMoveThresholdForChunkUpdate * viewerMoveThresholdForChunkUpdate;
@@ -61,7 +62,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 		public void Update()
 		{
-			viewerPosition = new Vector2(viewer.position.x, viewer.position.y);
+			viewerPosition = new Vector2(viewer.position.x, viewer.position.y) / scale;
 			if ((viewerPositionOld - viewerPosition).sqrMagnitude > sqrViewerMoveThresholdForChunkUpdate)
 			{
 				UpdateVisibleChunks();
@@ -125,8 +126,9 @@ namespace AtomosZ.BoMII.Terrain.Generators
 				Vector3 posV3 = new Vector3(position.x, 0, position.y);
 
 				terrainObject = new GameObject("Terrain Chunk " + position);
-				terrainObject.transform.position = posV3;
+				terrainObject.transform.position = posV3 * scale;
 				terrainObject.transform.SetParent(parent, false);
+				terrainObject.transform.localScale = Vector3.one * scale;
 
 
 				meshRenderer = terrainObject.AddComponent<MeshRenderer>();

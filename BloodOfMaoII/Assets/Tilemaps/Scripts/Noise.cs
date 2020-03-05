@@ -73,36 +73,28 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			{
 				for (int x = 0; x < mapWidth; ++x)
 				{
-					//if (normalizeMode == NormalizeMode.Local)
-					//	noiseMap[x, y] = Mathf.InverseLerp(minLocalNoiseHeight, maxLocalNoiseHeight, noiseMap[x, y]);
-					//else
-					//{
-					//	float normalizedHeight = (noiseMap[x, y] + 1) / (2 * maxPossibleHeight);
-					//	noiseMap[x, y] = normalizedHeight;
-					//}
-
-					float inverseLerp = Mathf.InverseLerp(minLocalNoiseHeight, maxLocalNoiseHeight, noiseMap[x, y]);
-					float normalizedHeight = (noiseMap[x, y] + 1) / (2 * maxPossibleHeight);
-
-					float distFromCenter = Vector2.Distance(new Vector2(x, y), center);
-					float t;
-					if (distFromCenter > EndlessTerrain.DMax)
-						t = 1;
-					else if (distFromCenter < EndlessTerrain.DMin)
-						t = 0;
+					if (normalizeMode == NormalizeMode.Local)
+						noiseMap[x, y] = Mathf.InverseLerp(minLocalNoiseHeight, maxLocalNoiseHeight, noiseMap[x, y]);
 					else
-						t = Mathf.Lerp(1, 0, distFromCenter/ center.x);
-					//float t = Mathf.Min(distFromCenter / Vector2.Distance(Vector2.zero, center), EndlessTerrain.MaxTRatio);
+					{
+						float normalizedHeight = (noiseMap[x, y] + 1) / (2 * maxPossibleHeight / 1.75f);
+						noiseMap[x, y] = Mathf.Clamp(normalizedHeight, 0, int.MaxValue);
+					}
 
-					float internormalized = Mathf.Lerp(inverseLerp, normalizedHeight, t);
-					noiseMap[x, y] = internormalized;
-					// z= x^2 / a^2 + y^2/ b^2
-					// where a and b are constants that dictate the level of curvature in the xz and yz planes respectively
-					// if a == b it is a circular paraboloid
-					//float parabolicConstant = 2;
-					//float z = (x * x + y * y) / (2 * parabolicConstant * parabolicConstant);
-					//float internormalized = Mathf.Lerp(normalizedHeight, inverseLerp, z);
-					//noiseMap[x,y] = internormalized;
+					//float inverseLerp = Mathf.InverseLerp(minLocalNoiseHeight, maxLocalNoiseHeight, noiseMap[x, y]);
+					//float normalizedHeight = (noiseMap[x, y] + 1) / (2 * maxPossibleHeight);
+
+					//float distFromCenter = Vector2.Distance(new Vector2(x, y), center);
+					//float t;
+					//if (distFromCenter > EndlessTerrain.DMax)
+					//	t = 1;
+					//else if (distFromCenter < EndlessTerrain.DMin)
+					//	t = 0;
+					//else
+					//	t = Mathf.Lerp(0, 1, distFromCenter/ center.x);
+
+					//float internormalized = Mathf.Lerp(inverseLerp, normalizedHeight, t);
+					//noiseMap[x, y] = internormalized;
 
 				}
 			}
