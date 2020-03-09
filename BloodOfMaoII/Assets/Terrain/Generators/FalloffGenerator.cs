@@ -10,20 +10,35 @@ public static class FalloffGenerator
 		TopLeft, TopRight, BottomRight, BottomLeft
 	}
 
-	public static float[,] GenerateIslandFalloffMap(int mapSize, float a, float b)
+	public static float[,] GenerateIslandFalloffMap(int mapSize, float a, float b, bool circularIsland)
 	{
 		float halfMapSize = mapSize * .5f;
 		float[,] map = new float[mapSize, mapSize];
-		for (int i = 0; i < mapSize; ++i)
-			for (int j = 0; j < mapSize; ++j)
+		if (circularIsland)
+		{
+			for (int i = 0; i < mapSize; ++i)
 			{
-				//float x = i / (float)mapSize * 2 - 1;
-				//float y = j / (float)mapSize * 2 - 1;
-				//float value = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
-				float distanFromCenter = Vector2.Distance(new Vector2(halfMapSize, halfMapSize), new Vector2(i, j));
-				float value = Mathf.Lerp(0, 1, distanFromCenter / halfMapSize);
-				map[i, j] = Evaluate(value, a, b);
+				for (int j = 0; j < mapSize; ++j)
+				{
+					float distanFromCenter = Vector2.Distance(new Vector2(halfMapSize, halfMapSize), new Vector2(i, j));
+					float value = Mathf.Lerp(0, 1, distanFromCenter / halfMapSize);
+					map[i, j] = Evaluate(value, a, b);
+				}
 			}
+		}
+		else
+		{
+			for (int i = 0; i < mapSize; ++i)
+			{
+				for (int j = 0; j < mapSize; ++j)
+				{
+					float x = i / (float)mapSize * 2 - 1;
+					float y = j / (float)mapSize * 2 - 1;
+					float value = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
+					map[i, j] = Evaluate(value, a, b);
+				}
+			}
+		}
 
 		return map;
 	}
@@ -51,11 +66,10 @@ public static class FalloffGenerator
 						//float value = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
 						//float distance = Vector2.Distance(new Vector2(halfMapSize, halfMapSize), new Vector2(i, j));
 						//float fade = Mathf.Lerp(1, 0, distance / (mapSize * mapSize));
-						//map[i, j] = Evaluate(value, a, b) * fade;
+						//evaluated = Evaluate(value, a, b) * fade;
 						float distFromCenter = Vector2.Distance(new Vector2(halfMapSize, 2 * mapSize), new Vector2(i, 2 * j));
 						float value = Mathf.Lerp(1, 0, .25f * distFromCenter * distFromCenter / (halfMapSize * halfMapSize));
 						evaluated = Evaluate(value, a, b);
-						//continue;
 					}
 				}
 
@@ -82,10 +96,9 @@ public static class FalloffGenerator
 						//float y = j / (float)mapSize * 2 - 1;
 						//float value = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
 						//map[i, j] = Evaluate(value, a, b);
-						float distFromCenter = Vector2.Distance(new Vector2(2f*mapSize, halfMapSize), new Vector2(2f*i, j));
+						float distFromCenter = Vector2.Distance(new Vector2(2f * mapSize, halfMapSize), new Vector2(2f * i, j));
 						float value = Mathf.Lerp(1, 0, .25f * distFromCenter * distFromCenter / (halfMapSize * halfMapSize));
 						evaluated = Mathf.Max(Evaluate(value, a, b), evaluated);
-						//continue;
 					}
 				}
 
@@ -97,7 +110,6 @@ public static class FalloffGenerator
 					//	float y = j / (float)mapSize * 2 - 1;
 					//	float value = Mathf.Max(Mathf.Abs(x), Mathf.Abs(y));
 					//	map[i, j] = Evaluate(value, a, b);
-					//	continue;
 					//}
 
 					float distFromCenter = Vector2.Distance(new Vector2(0, halfMapSize), new Vector2(2f * i, j));
@@ -119,7 +131,6 @@ public static class FalloffGenerator
 						float distanFromCenter = Vector2.Distance(new Vector2(mapSize, mapSize), new Vector2(i, j));
 						float value = Mathf.Lerp(1, 0, distanFromCenter * distanFromCenter / (halfMapSize * halfMapSize));
 						evaluated = Mathf.Max(Evaluate(value, a, b), evaluated);
-						//continue;
 					}
 				}
 
@@ -137,7 +148,6 @@ public static class FalloffGenerator
 						float distanFromCenter = Vector2.Distance(new Vector2(0, mapSize), new Vector2(i, j));
 						float value = Mathf.Lerp(1, 0, distanFromCenter * distanFromCenter / (halfMapSize * halfMapSize));
 						evaluated = Mathf.Max(Evaluate(value, a, b), evaluated);
-						//continue;
 					}
 				}
 
@@ -152,7 +162,6 @@ public static class FalloffGenerator
 					//	float distance = Vector2.Distance(Vector2.zero, new Vector2(i, j));
 					//	float fade = Mathf.Lerp(1, 0, distance * distance / (10 * mapSize));
 					//	map[i, j] = Evaluate(value, a, b) * fade;
-					//	continue;
 					//}
 
 					float distanFromCenter = Vector2.Distance(new Vector2(0, 0), new Vector2(i, j));
@@ -174,7 +183,6 @@ public static class FalloffGenerator
 						float distanFromCenter = Vector2.Distance(new Vector2(mapSize, 0), new Vector2(i, j));
 						float value = Mathf.Lerp(1, 0, distanFromCenter * distanFromCenter / (halfMapSize * halfMapSize));
 						evaluated = Mathf.Max(Evaluate(value, a, b), evaluated);
-						//continue;
 					}
 				}
 

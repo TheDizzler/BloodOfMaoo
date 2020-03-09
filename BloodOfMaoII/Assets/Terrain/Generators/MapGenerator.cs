@@ -22,7 +22,12 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		public bool autoUpdate = true;
 
 		[SerializeField] private bool islandFalloff = true;
+		[SerializeField] private bool circularIsland = true;
 		[SerializeField] private List<FalloffGenerator.FalloffSide> falloffs = new List<FalloffGenerator.FalloffSide>();
+		[Range(.75f, maxFalloffConstantA)]
+		[SerializeField] private float falloffConstantA = .5f;
+		[Range(.5f, maxFalloffConstantB)]
+		[SerializeField] private float falloffConstantB = .5f;
 		[Range(0, 6)]
 		[SerializeField] private int editorPrefiewLevelOfDetail = 0;
 		[Tooltip("Only for in editor debug")]
@@ -39,10 +44,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		[SerializeField] private float meshHeighMultiplier = 1;
 		[SerializeField] private AnimationCurve heightMapCurve = null;
 		[SerializeField] private TerrainType[] regions = null;
-		[Range(.1f, maxFalloffConstantA)]
-		[SerializeField] private float falloffConstantA = .5f;
-		[Range(.5f, maxFalloffConstantB)]
-		[SerializeField] private float falloffConstantB = .5f;
+		
 		private Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
 		private Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
@@ -50,15 +52,22 @@ namespace AtomosZ.BoMII.Terrain.Generators
 #if UNITY_EDITOR
 		public void DrawMapInEditor()
 		{
-			float[,] falloffMap;
+			MapData mapData;
+			float[,] falloffMap = TerrainChunk.ZeroFalloffMap;
 			if (islandFalloff)
-				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize, falloffConstantA, falloffConstantB);
-			else
+			{
+				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(
+					mapChunkSize, falloffConstantA, falloffConstantB, circularIsland);
+				mapData = CreateColorMapWithFalloff(falloffMap);
+			}
+			else if (falloffs.Count > 0)
 			{
 				falloffMap = FalloffGenerator.GenerateContinentFalloffMap(
-						mapChunkSize, falloffConstantA, falloffConstantB,
-						falloffs);
+					mapChunkSize, falloffConstantA, falloffConstantB, falloffs);
+				mapData = CreateColorMapWithFalloff(falloffMap);
 			}
+			else
+				mapData = GenerateMapData(Vector2.zero);
 
 			if (Application.isPlaying)
 			{
@@ -66,13 +75,12 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			}
 			else
 			{
-				MapData mapData = GenerateMapData(Vector2.zero);
 				MapDisplay display = GetComponent<MapDisplay>();
 				switch (drawMode)
 				{
 					case DrawMode.NoiseMap:
 						display.DrawTexture(
-							TextureGenerator.TextureFromHeightMap(mapData.heightMap));
+							TextureGenerator.TextureFromHeightMap(mapData.baseHeightMap));
 						break;
 					case DrawMode.ColorMap:
 						display.DrawTexture(
@@ -81,7 +89,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 					case DrawMode.Mesh:
 						display.DrawMesh(
 							MeshGenerator.GenerateTerrainMesh(
-								mapData.heightMap, meshHeighMultiplier, heightMapCurve, editorPrefiewLevelOfDetail),
+								mapData.baseHeightMap, meshHeighMultiplier, heightMapCurve, editorPrefiewLevelOfDetail),
 							TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
 						break;
 					case DrawMode.FalloffMap:
@@ -93,6 +101,35 @@ namespace AtomosZ.BoMII.Terrain.Generators
 						break;
 				}
 			}
+		}
+
+		private MapData CreateColorMapWithFalloff(float[,] falloffMap)
+		{
+			float[,] noiseMap = Noise.GenerateNoiseMap(
+				mapChunkSize, mapChunkSize, seed, noiseScale,
+				octaves, persistance, lacunarity, Vector2.zero, normalizeMode);
+
+			Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
+			for (int y = 0; y < mapChunkSize; ++y)
+			{
+				for (int x = 0; x < mapChunkSize; ++x)
+				{
+					float currentHeight = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
+					for (int i = 0; i < regions.Length; ++i)
+					{
+						if (currentHeight >= regions[i].height)
+						{
+							colorMap[y * mapChunkSize + x] = regions[i].color;
+						}
+						else
+						{
+							break;
+						}
+					}
+				}
+			}
+
+			return new MapData(noiseMap, colorMap);
 		}
 #endif
 
@@ -143,7 +180,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			{
 				a = Random.Range(.5f, maxFalloffConstantA);
 				b = Random.Range(.5f, maxFalloffConstantB);
-				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize, a, b);
+				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize, a, b, circularIsland);
 			}
 
 			ThreadStart threadStart = delegate
@@ -184,14 +221,14 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		private void MeshDataThread(MapData mapData, int lod, Action<MeshData> callback)
 		{
 			MeshData meshData = MeshGenerator.GenerateTerrainMesh(
-				mapData.heightMap, meshHeighMultiplier, heightMapCurve, lod);
+				mapData.alteredHeightMap, meshHeighMultiplier, heightMapCurve, lod);
 			lock (meshDataThreadInfoQueue)
 			{
 				meshDataThreadInfoQueue.Enqueue(new MapThreadInfo<MeshData>(callback, meshData));
 			}
 		}
 
-		private MapData GenerateMapData(Vector2 center/*, bool useFalloff*//*, float[,] falloffMap*/)
+		private MapData GenerateMapData(Vector2 center)
 		{
 			// calculate the offsets based on the tile position
 			float[,] noiseMap = Noise.GenerateNoiseMap(
@@ -207,11 +244,6 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			{
 				for (int x = 0; x < mapChunkSize; ++x)
 				{
-					//if (useFalloff)
-					//{
-					//	noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
-					//}
-
 					float currentHeight = noiseMap[x, y];
 					for (int i = 0; i < regions.Length; ++i)
 					{
@@ -254,8 +286,9 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 	public class MapData
 	{
-		public float[,] heightMap;
+		public readonly float[,] baseHeightMap;
 		public float[,] falloffMap;
+		public float[,] alteredHeightMap;
 		public Color[] colorMap;
 		public float falloffConstantA;
 		public float falloffConstantB;
@@ -263,7 +296,8 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 		public MapData(float[,] heightMap, Color[] colorMap)
 		{
-			this.heightMap = heightMap;
+			baseHeightMap = heightMap;
+			alteredHeightMap = heightMap;
 			this.colorMap = colorMap;
 		}
 	}

@@ -222,7 +222,7 @@ Transform:
   m_Father: {fileID: 1776029374}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!43 &490084253
+--- !u!43 &445474028
 Mesh:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1877,7 +1877,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!64 &996681442
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -2095,7 +2095,10 @@ MonoBehaviour:
   drawMode: 3
   autoUpdate: 1
   islandFalloff: 0
-  falloffs: 0100000003000000040000000200000007000000060000000500000008000000
+  circularIsland: 0
+  falloffs: 0100000000000000000000000000000000000000000000000000000000000000
+  falloffConstantA: 3
+  falloffConstantB: 5
   editorPrefiewLevelOfDetail: 0
   editorUseFalloff: 1
   noiseScale: 85.2
@@ -2149,7 +2152,7 @@ MonoBehaviour:
     m_RotationOrder: 4
   regions:
   - name: DeepWater
-    height: 0
+    height: -1
     color: {r: 0.26699895, g: 0.5015767, b: 0.7075472, a: 1}
   - name: Water
     height: 0.25
@@ -2172,8 +2175,6 @@ MonoBehaviour:
   - name: IceCap
     height: 1.5
     color: {r: 1, g: 0, b: 0.89318705, a: 1}
-  falloffConstantA: 3
-  falloffConstantB: 5
 --- !u!4 &1776029374
 Transform:
   m_ObjectHideFlags: 0
@@ -2281,7 +2282,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2002995894}
-  m_Mesh: {fileID: 490084253}
+  m_Mesh: {fileID: 445474028}
 --- !u!4 &2002995897
 Transform:
   m_ObjectHideFlags: 0

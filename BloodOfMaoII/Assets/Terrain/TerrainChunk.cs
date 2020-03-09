@@ -10,7 +10,7 @@ namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainChunk : MonoBehaviour
 	{
-		private static float[,] ZeroFalloffMap = new float[MapGenerator.mapChunkSize, MapGenerator.mapChunkSize];
+		public static readonly float[,] ZeroFalloffMap = new float[MapGenerator.mapChunkSize, MapGenerator.mapChunkSize];
 
 		private Vector2 position;
 		private Bounds bounds;
@@ -22,7 +22,6 @@ namespace AtomosZ.BoMII.Terrain
 		private bool mapDataReceived;
 		private int previousLODIndex = -1;
 		private List<FalloffSide> falloffSides = new List<FalloffSide>();
-		private float[,] heightMap = null;
 
 
 		public void Initialize(Vector2 coords, int size, LODInfo[] detailLvls, Transform parent, Material material)
@@ -162,23 +161,23 @@ namespace AtomosZ.BoMII.Terrain
 
 				if (ContainsAllSides())
 					mapData.falloffMap = FalloffGenerator.GenerateIslandFalloffMap(
-						MapGenerator.mapChunkSize, mapData.falloffConstantA, mapData.falloffConstantB);
+						MapGenerator.mapChunkSize, mapData.falloffConstantA, mapData.falloffConstantB, true);
 				else if (falloffSides.Count > 0)
 					mapData.falloffMap = FalloffGenerator.GenerateContinentFalloffMap(
 						MapGenerator.mapChunkSize, mapData.falloffConstantA, mapData.falloffConstantB, falloffSides);
 
 			}
 
-			if (heightMap == null)
-				heightMap = new float[MapGenerator.mapChunkSize, MapGenerator.mapChunkSize];
+			float[,] alteredHeightMap = new float[MapGenerator.mapChunkSize, MapGenerator.mapChunkSize];
 			Color[] colorMap = new Color[MapGenerator.mapChunkSize * MapGenerator.mapChunkSize];
 			for (int y = 0; y < MapGenerator.mapChunkSize; ++y)
 			{
 				for (int x = 0; x < MapGenerator.mapChunkSize; ++x)
 				{
-					heightMap[x, y] = Mathf.Clamp01(mapData.heightMap[x, y] - mapData.falloffMap[x, y]);
+					alteredHeightMap[x, y] 
+						= Mathf.Clamp01(mapData.baseHeightMap[x, y] - mapData.falloffMap[x, y]);
 
-					float currentHeight = heightMap[x, y];
+					float currentHeight = alteredHeightMap[x, y];
 					for (int i = 0; i < regions.Length; ++i)
 					{
 						if (currentHeight >= regions[i].height)
@@ -195,11 +194,13 @@ namespace AtomosZ.BoMII.Terrain
 			}
 
 			mapData.colorMap = colorMap;
+			mapData.alteredHeightMap = alteredHeightMap;
 			for (int i = 0; i < detailLevels.Length; ++i)
 			{
 				if (lodMeshes[i].hasMesh)
 					lodMeshes[i].mesh = MeshGenerator.GenerateTerrainMesh(
-							heightMap, mapGen.GetMeshHeightMultiplier(), mapGen.GetHeightMapCurve(), lodMeshes[i].lod).CreateMesh();
+						mapData.alteredHeightMap, mapGen.GetMeshHeightMultiplier(),
+						mapGen.GetHeightMapCurve(), lodMeshes[i].lod).CreateMesh();
 			}
 
 			if (previousLODIndex > -1)
