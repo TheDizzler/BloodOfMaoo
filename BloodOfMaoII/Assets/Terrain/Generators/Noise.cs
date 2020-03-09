@@ -80,22 +80,6 @@ namespace AtomosZ.BoMII.Terrain.Generators
 						float normalizedHeight = (noiseMap[x, y] + 1) / (2 * maxPossibleHeight / 1.75f);
 						noiseMap[x, y] = Mathf.Clamp(normalizedHeight, 0, int.MaxValue);
 					}
-
-					//float inverseLerp = Mathf.InverseLerp(minLocalNoiseHeight, maxLocalNoiseHeight, noiseMap[x, y]);
-					//float normalizedHeight = (noiseMap[x, y] + 1) / (2 * maxPossibleHeight);
-
-					//float distFromCenter = Vector2.Distance(new Vector2(x, y), center);
-					//float t;
-					//if (distFromCenter > EndlessTerrain.DMax)
-					//	t = 1;
-					//else if (distFromCenter < EndlessTerrain.DMin)
-					//	t = 0;
-					//else
-					//	t = Mathf.Lerp(0, 1, distFromCenter/ center.x);
-
-					//float internormalized = Mathf.Lerp(inverseLerp, normalizedHeight, t);
-					//noiseMap[x, y] = internormalized;
-
 				}
 			}
 

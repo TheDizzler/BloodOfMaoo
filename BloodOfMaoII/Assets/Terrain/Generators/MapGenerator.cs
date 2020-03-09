@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
 using static AtomosZ.BoMII.Terrain.Generators.Noise;
+using Random = UnityEngine.Random;
 
 namespace AtomosZ.BoMII.Terrain.Generators
 {
@@ -10,16 +11,22 @@ namespace AtomosZ.BoMII.Terrain.Generators
 	{
 		public enum DrawMode { NoiseMap, ColorMap, Mesh, FalloffMap, HexGrid };
 
-		public const int mapChunkSize = 241;
+		public const float maxFalloffConstantA = 3;
+		public const float maxFalloffConstantB = 5;
+		public const int mapChunkSize = 121;
+		public readonly float[,] nofalloff;
 
 		public NormalizeMode normalizeMode;
 		public DrawMode drawMode;
 
 		public bool autoUpdate = true;
-		public bool useFalloff;
 
+		[SerializeField] private bool islandFalloff = true;
+		[SerializeField] private List<FalloffGenerator.FalloffSide> falloffs = new List<FalloffGenerator.FalloffSide>();
 		[Range(0, 6)]
 		[SerializeField] private int editorPrefiewLevelOfDetail = 0;
+		[Tooltip("Only for in editor debug")]
+		[SerializeField] private bool editorUseFalloff;
 		[Range(1, 100)]
 		[SerializeField] private float noiseScale = 1;
 		[Range(1, 60)]
@@ -32,21 +39,27 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		[SerializeField] private float meshHeighMultiplier = 1;
 		[SerializeField] private AnimationCurve heightMapCurve = null;
 		[SerializeField] private TerrainType[] regions = null;
-
-		private float[,] falloffMap;
-
+		[Range(.1f, maxFalloffConstantA)]
+		[SerializeField] private float falloffConstantA = .5f;
+		[Range(.5f, maxFalloffConstantB)]
+		[SerializeField] private float falloffConstantB = .5f;
 		private Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
 		private Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
-		public void Awake()
-		{
-			falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
-		}
 
 #if UNITY_EDITOR
 		public void DrawMapInEditor()
 		{
-			falloffMap = FalloffGenerator.GenerateFalloffMap(mapChunkSize);
+			float[,] falloffMap;
+			if (islandFalloff)
+				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize, falloffConstantA, falloffConstantB);
+			else
+			{
+				falloffMap = FalloffGenerator.GenerateContinentFalloffMap(
+						mapChunkSize, falloffConstantA, falloffConstantB,
+						falloffs);
+			}
+
 			if (Application.isPlaying)
 			{
 				GetComponent<EndlessTerrain>().RefreshMap();
@@ -58,10 +71,12 @@ namespace AtomosZ.BoMII.Terrain.Generators
 				switch (drawMode)
 				{
 					case DrawMode.NoiseMap:
-						display.DrawTexture(TextureGenerator.TextureFromHeightMap(mapData.heightMap));
+						display.DrawTexture(
+							TextureGenerator.TextureFromHeightMap(mapData.heightMap));
 						break;
 					case DrawMode.ColorMap:
-						display.DrawTexture(TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
+						display.DrawTexture(
+							TextureGenerator.TextureFromColorMap(mapData.colorMap, mapChunkSize, mapChunkSize));
 						break;
 					case DrawMode.Mesh:
 						display.DrawMesh(
@@ -71,7 +86,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 						break;
 					case DrawMode.FalloffMap:
 						display.DrawTexture(
-							TextureGenerator.TextureFromHeightMap(FalloffGenerator.GenerateFalloffMap(mapChunkSize)));
+							TextureGenerator.TextureFromHeightMap(falloffMap));
 						break;
 					case DrawMode.HexGrid:
 
@@ -103,19 +118,50 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			}
 		}
 
+		public TerrainType[] GetRegions()
+		{
+			return regions;
+		}
+
+		public AnimationCurve GetHeightMapCurve()
+		{
+			return heightMapCurve;
+		}
+
+		public float GetMeshHeightMultiplier()
+		{
+			return meshHeighMultiplier;
+		}
+
 		public void RequestMapData(Vector2 center, Action<MapData> callback)
 		{
+			float[,] falloffMap = null;
+			int falloffOdds = Random.Range(0, 10); // Unity APIs can't be called in threads
+			float a = -1;
+			float b = -1;
+			if (falloffOdds <= 2)
+			{
+				a = Random.Range(.5f, maxFalloffConstantA);
+				b = Random.Range(.5f, maxFalloffConstantB);
+				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize, a, b);
+			}
+
 			ThreadStart threadStart = delegate
 			{
-				MapDataThread(center, callback);
+				MapDataThread(center, callback, falloffMap, a, b);
 			};
 
 			new Thread(threadStart).Start();
 		}
 
-		private void MapDataThread(Vector2 center, Action<MapData> callback)
+		private void MapDataThread(Vector2 center, Action<MapData> callback,
+			float[,] falloffMap, float a, float b)
 		{
+
 			MapData mapData = GenerateMapData(center);
+			mapData.falloffMap = falloffMap;
+			mapData.falloffConstantA = a;
+			mapData.falloffConstantB = b;
 			lock (mapDataThreadInfoQueue)
 			{
 				mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));
@@ -145,7 +191,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			}
 		}
 
-		private MapData GenerateMapData(Vector2 center)
+		private MapData GenerateMapData(Vector2 center/*, bool useFalloff*//*, float[,] falloffMap*/)
 		{
 			// calculate the offsets based on the tile position
 			float[,] noiseMap = Noise.GenerateNoiseMap(
@@ -161,10 +207,11 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			{
 				for (int x = 0; x < mapChunkSize; ++x)
 				{
-					if (useFalloff)
-					{
-						noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
-					}
+					//if (useFalloff)
+					//{
+					//	noiseMap[x, y] = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
+					//}
+
 					float currentHeight = noiseMap[x, y];
 					for (int i = 0; i < regions.Length; ++i)
 					{
@@ -205,10 +252,13 @@ namespace AtomosZ.BoMII.Terrain.Generators
 	}
 
 
-	public struct MapData
+	public class MapData
 	{
 		public float[,] heightMap;
+		public float[,] falloffMap;
 		public Color[] colorMap;
+		public float falloffConstantA;
+		public float falloffConstantB;
 
 
 		public MapData(float[,] heightMap, Color[] colorMap)
