@@ -11,17 +11,19 @@ namespace AtomosZ.BoMII.Terrain
 	public class TerrainChunk : MonoBehaviour
 	{
 		public static readonly float[,] ZeroFalloffMap = new float[MapGenerator.mapChunkSize, MapGenerator.mapChunkSize];
-
 		private Vector2 position;
 		private Bounds bounds;
 		private MeshRenderer meshRenderer;
 		private MeshFilter meshFilter;
+		private MeshCollider meshCollider;
 		private LODInfo[] detailLevels;
 		private LODMesh[] lodMeshes;
+		private LODMesh collisionLODMesh;
 		private MapData mapData;
 		private bool mapDataReceived;
 		private int previousLODIndex = -1;
 		private List<FalloffSide> falloffSides = new List<FalloffSide>();
+		private bool isIsland = false;
 
 
 		public void Initialize(Vector2 coords, int size, LODInfo[] detailLvls, Transform parent, Material material)
@@ -39,12 +41,15 @@ namespace AtomosZ.BoMII.Terrain
 			meshRenderer = GetComponent<MeshRenderer>();
 			meshRenderer.material = material;
 			meshFilter = GetComponent<MeshFilter>();
+			meshCollider = gameObject.AddComponent<MeshCollider>();
 			SetVisible(false);
 
 			lodMeshes = new LODMesh[detailLevels.Length];
 			for (int i = 0; i < detailLevels.Length; ++i)
 			{
 				lodMeshes[i] = new LODMesh(detailLevels[i].lod, UpdateTerrainChunk);
+				if (detailLevels[i].useFullCollider)
+					collisionLODMesh = lodMeshes[i];
 			}
 
 			mapGenerator.RequestMapData(position, OnMapDataReceived);
@@ -104,6 +109,14 @@ namespace AtomosZ.BoMII.Terrain
 						lodMesh.RequestMesh(mapData);
 				}
 
+				if (lodIndex == 0)
+				{
+					if (collisionLODMesh.hasMesh)
+						meshCollider.sharedMesh = collisionLODMesh.mesh;
+					else if (!collisionLODMesh.hasRequestedMesh)
+						collisionLODMesh.RequestMesh(mapData);
+				}
+
 				terrainChunksVisibleLastUpdate.Add(this);
 			}
 
@@ -133,7 +146,10 @@ namespace AtomosZ.BoMII.Terrain
 			mapDataReceived = true;
 
 			if (mapData.falloffMap != null) // then it's an island
+			{
+				isIsland = true;
 				RefreshFalloffMap();
+			}
 
 			Texture2D texture = TextureGenerator.TextureFromColorMap(
 				mapData.colorMap, MapGenerator.mapChunkSize, MapGenerator.mapChunkSize);
@@ -161,33 +177,36 @@ namespace AtomosZ.BoMII.Terrain
 
 				if (ContainsAllSides())
 					mapData.falloffMap = FalloffGenerator.GenerateIslandFalloffMap(
-						MapGenerator.mapChunkSize, mapData.falloffConstantA, mapData.falloffConstantB, true);
+						MapGenerator.mapChunkSize + 2, mapData.falloffConstantA, mapData.falloffConstantB, true);
 				else if (falloffSides.Count > 0)
 					mapData.falloffMap = FalloffGenerator.GenerateContinentFalloffMap(
-						MapGenerator.mapChunkSize, mapData.falloffConstantA, mapData.falloffConstantB, falloffSides);
+						MapGenerator.mapChunkSize + 2, mapData.falloffConstantA, mapData.falloffConstantB, falloffSides);
 
 			}
 
-			float[,] alteredHeightMap = new float[MapGenerator.mapChunkSize, MapGenerator.mapChunkSize];
+			float[,] alteredHeightMap = new float[MapGenerator.mapChunkSize + 2, MapGenerator.mapChunkSize + 2];
 			Color[] colorMap = new Color[MapGenerator.mapChunkSize * MapGenerator.mapChunkSize];
-			for (int y = 0; y < MapGenerator.mapChunkSize; ++y)
+			for (int y = 0; y < MapGenerator.mapChunkSize + 2; ++y)
 			{
-				for (int x = 0; x < MapGenerator.mapChunkSize; ++x)
+				for (int x = 0; x < MapGenerator.mapChunkSize + 2; ++x)
 				{
-					alteredHeightMap[x, y] 
+					alteredHeightMap[x, y]
 						= Mathf.Clamp01(mapData.baseHeightMap[x, y] - mapData.falloffMap[x, y]);
 
-					float currentHeight = alteredHeightMap[x, y];
-					for (int i = 0; i < regions.Length; ++i)
+					if (x < MapGenerator.mapChunkSize && y < MapGenerator.mapChunkSize)
 					{
-						if (currentHeight >= regions[i].height)
+						float currentHeight = alteredHeightMap[x, y];
+						for (int i = 0; i < regions.Length; ++i)
 						{
-							colorMap[y * MapGenerator.mapChunkSize + x] = regions[i].color;
-						}
-						else
-						{
-							//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
-							break;
+							if (currentHeight >= regions[i].height)
+							{
+								colorMap[y * MapGenerator.mapChunkSize + x] = regions[i].color;
+							}
+							else
+							{
+								//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
+								break;
+							}
 						}
 					}
 				}
@@ -251,6 +270,7 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			public int lod;
 			public float visibleDistThreshold;
+			public bool useFullCollider;
 		}
 	}
 }

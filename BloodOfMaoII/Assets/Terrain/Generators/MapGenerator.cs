@@ -13,7 +13,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 		public const float maxFalloffConstantA = 3;
 		public const float maxFalloffConstantB = 5;
-		public const int mapChunkSize = 121;
+		public const int mapChunkSize = 119;
 		public readonly float[,] nofalloff;
 
 		public NormalizeMode normalizeMode;
@@ -44,7 +44,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		[SerializeField] private float meshHeighMultiplier = 1;
 		[SerializeField] private AnimationCurve heightMapCurve = null;
 		[SerializeField] private TerrainType[] regions = null;
-		
+
 		private Queue<MapThreadInfo<MapData>> mapDataThreadInfoQueue = new Queue<MapThreadInfo<MapData>>();
 		private Queue<MapThreadInfo<MeshData>> meshDataThreadInfoQueue = new Queue<MapThreadInfo<MeshData>>();
 
@@ -57,13 +57,13 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			if (islandFalloff)
 			{
 				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(
-					mapChunkSize, falloffConstantA, falloffConstantB, circularIsland);
+					mapChunkSize + 2, falloffConstantA, falloffConstantB, circularIsland);
 				mapData = CreateColorMapWithFalloff(falloffMap);
 			}
 			else if (falloffs.Count > 0)
 			{
 				falloffMap = FalloffGenerator.GenerateContinentFalloffMap(
-					mapChunkSize, falloffConstantA, falloffConstantB, falloffs);
+					mapChunkSize + 2, falloffConstantA, falloffConstantB, falloffs);
 				mapData = CreateColorMapWithFalloff(falloffMap);
 			}
 			else
@@ -106,24 +106,27 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		private MapData CreateColorMapWithFalloff(float[,] falloffMap)
 		{
 			float[,] noiseMap = Noise.GenerateNoiseMap(
-				mapChunkSize, mapChunkSize, seed, noiseScale,
+				mapChunkSize + 2, mapChunkSize + 2, seed, noiseScale,
 				octaves, persistance, lacunarity, Vector2.zero, normalizeMode);
 
 			Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
-			for (int y = 0; y < mapChunkSize; ++y)
+			for (int y = 0; y < mapChunkSize + 2; ++y)
 			{
-				for (int x = 0; x < mapChunkSize; ++x)
+				for (int x = 0; x < mapChunkSize + 2; ++x)
 				{
-					float currentHeight = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
-					for (int i = 0; i < regions.Length; ++i)
+					if (x < mapChunkSize && y < mapChunkSize)
 					{
-						if (currentHeight >= regions[i].height)
+						float currentHeight = Mathf.Clamp01(noiseMap[x, y] - falloffMap[x, y]);
+						for (int i = 0; i < regions.Length; ++i)
 						{
-							colorMap[y * mapChunkSize + x] = regions[i].color;
-						}
-						else
-						{
-							break;
+							if (currentHeight >= regions[i].height)
+							{
+								colorMap[y * mapChunkSize + x] = regions[i].color;
+							}
+							else
+							{
+								break;
+							}
 						}
 					}
 				}
@@ -173,14 +176,14 @@ namespace AtomosZ.BoMII.Terrain.Generators
 		public void RequestMapData(Vector2 center, Action<MapData> callback)
 		{
 			float[,] falloffMap = null;
-			int falloffOdds = Random.Range(0, 10); // Unity APIs can't be called in threads
+			int falloffOdds = Random.Range(0, 20); // Unity APIs can't be called in threads
 			float a = -1;
 			float b = -1;
-			if (falloffOdds <= 2)
+			if (falloffOdds < 1)
 			{
 				a = Random.Range(.5f, maxFalloffConstantA);
 				b = Random.Range(.5f, maxFalloffConstantB);
-				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize, a, b, circularIsland);
+				falloffMap = FalloffGenerator.GenerateIslandFalloffMap(mapChunkSize + 2, a, b, circularIsland);
 			}
 
 			ThreadStart threadStart = delegate
@@ -199,6 +202,7 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			mapData.falloffMap = falloffMap;
 			mapData.falloffConstantA = a;
 			mapData.falloffConstantB = b;
+
 			lock (mapDataThreadInfoQueue)
 			{
 				mapDataThreadInfoQueue.Enqueue(new MapThreadInfo<MapData>(callback, mapData));
@@ -230,9 +234,8 @@ namespace AtomosZ.BoMII.Terrain.Generators
 
 		private MapData GenerateMapData(Vector2 center)
 		{
-			// calculate the offsets based on the tile position
 			float[,] noiseMap = Noise.GenerateNoiseMap(
-				mapChunkSize, mapChunkSize, seed, noiseScale,
+				mapChunkSize + 2, mapChunkSize + 2, seed, noiseScale,
 				octaves, persistance, lacunarity, center + offset, normalizeMode);
 
 			//tilemap.ClearAllTiles();
@@ -240,21 +243,25 @@ namespace AtomosZ.BoMII.Terrain.Generators
 			//int halfMapHeight = mapChunkSize / 2;
 
 			Color[] colorMap = new Color[mapChunkSize * mapChunkSize];
-			for (int y = 0; y < mapChunkSize; ++y)
+			for (int y = 0; y < mapChunkSize + 2; ++y)
 			{
-				for (int x = 0; x < mapChunkSize; ++x)
+				for (int x = 0; x < mapChunkSize + 2; ++x)
 				{
-					float currentHeight = noiseMap[x, y];
-					for (int i = 0; i < regions.Length; ++i)
+
+					if (x < mapChunkSize && y < mapChunkSize)
 					{
-						if (currentHeight >= regions[i].height)
+						float currentHeight = noiseMap[x, y];
+						for (int i = 0; i < regions.Length; ++i)
 						{
-							colorMap[y * mapChunkSize + x] = regions[i].color;
-						}
-						else
-						{
-							//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
-							break;
+							if (currentHeight >= regions[i].height)
+							{
+								colorMap[y * mapChunkSize + x] = regions[i].color;
+							}
+							else
+							{
+								//tilemap.SetTile(new Vector3Int( y - halfMapHeight, x - halfMapWidth, 0), terrainTiles[i]);
+								break;
+							}
 						}
 					}
 				}
