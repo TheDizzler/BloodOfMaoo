@@ -167,12 +167,23 @@ namespace AtomosZ.BoMII.Terrain
 							++wallCount;
 					}
 
-					centerTile.text.SetText(centerTile.coordinates + "\nWallCount: " + wallCount);
-					//if (GetSurroundingWallCount(x, y) < minNeighboursToSurvive)
-					//map[x, y] = (int)TerrainTileBase.TerrainType.Black;
 
-					//else if (GetSurroundingWallCount(last, x, y) > minNeighboursToSurvive)
-					//	map[x, y] = (int)TerrainTileBase.TerrainType.White;
+					if (wallCount < minNeighboursToSurvive)
+					{
+						if (centerTile.type == TerrainTileBase.TerrainType.White)
+						{
+							centerTile = CreateAndSetTile(coords, blackTile, centerTile); // Change must happen AFTER all tiles checked!
+						}
+					}
+					else if (wallCount > minNeighboursToSurvive)
+					{
+						if (centerTile.type == TerrainTileBase.TerrainType.Black)
+						{
+							centerTile = CreateAndSetTile(coords, whiteTile, centerTile);   // Change must happen AFTER all tiles checked!
+						}
+					}
+
+					centerTile.text.SetText(centerTile.coordinates + "\nWallCount: " + wallCount);
 				}
 			}
 
@@ -275,41 +286,54 @@ namespace AtomosZ.BoMII.Terrain
 			{
 				for (int y = 0; y < height; ++y)
 				{
-					TerrainTileBase tileType;
-					Vector3Int loc = GetOffsetCoords(x, y);
+					Vector3Int coord = GetOffsetCoords(x, y);
 
 					if (y == 0 || x == 0 || y == height - 1 || x == width - 1
 						|| rng.Next(0, 100) < randomFillPercent)
 					{
-						tileType = Instantiate(blackTile);
+						CreateAndSetTile(coord, blackTile);
 					}
 					else
 					{
-						tileType = Instantiate(whiteTile);
+						CreateAndSetTile(coord, whiteTile);
 					}
-
-					tileType.coordinates = loc;
-
-					GameObject newObj = Instantiate(locTextPrefab);
-					Vector3 worldPoint = tilemap.CellToWorld(loc);
-					newObj.transform.position = worldPoint;
-					newObj.transform.SetParent(textHolder, true);
-					TextMeshPro text = newObj.GetComponent<TextMeshPro>();
-					text.name = loc.ToString();
-					text.SetText(loc.ToString() + "\nWallCount: " + 0);
-					tileType.text = text;
-
-					tilemap.SetTile(loc, tileType);
 				}
 			}
 		}
 
+		private TerrainTileBase CreateAndSetTile(Vector3Int coord, TerrainTileBase tilePrefab, TerrainTileBase originalTile = null)
+		{
+			TerrainTileBase newTile = Instantiate(tilePrefab);
+			newTile.coordinates = coord;
+
+
+			if (originalTile == null)
+			{
+				GameObject newObj = Instantiate(locTextPrefab);
+				Vector3 worldPoint = tilemap.CellToWorld(coord);
+				newObj.transform.position = worldPoint;
+				newObj.transform.SetParent(textHolder, true);
+				TextMeshPro text = newObj.GetComponent<TextMeshPro>();
+				text.name = coord.ToString();
+				text.SetText(coord.ToString() + "\nWallCount: " + 0);
+				newTile.text = text;
+			}
+			else
+			{
+				newTile.text = originalTile.text;
+			}
+
+			tilemap.SetTile(coord, newTile);
+			return newTile;
+		}
+
+
 		private Vector3Int GetOffsetCoords(int x, int y)
 		{
-			return new Vector3Int(y, x, 0);
-			//return new Vector3Int(
-			//			Mathf.CeilToInt(-height * .5f) + y,
-			//			Mathf.CeilToInt(-width * .5f) + x, 0);
+			//return new Vector3Int(y, x, 0);
+			return new Vector3Int(
+						Mathf.CeilToInt(-height * .5f) + y,
+						Mathf.CeilToInt(-width * .5f) + x, 0);
 		}
 	}
 }
