@@ -214,15 +214,15 @@ namespace AtomosZ.BoMII.Terrain
 				case Cardinality.N:
 					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(1, 0, 0));
 				case Cardinality.NE: // !!
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2, 1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2, 1, 0));
 				case Cardinality.SE:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2 - 1, 1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2 - 1, 1, 0));
 				case Cardinality.S:
 					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(-1, 0, 0));
 				case Cardinality.SW:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2 - 1, -1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2 - 1, -1, 0));
 				case Cardinality.NW:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2, -1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2, -1, 0));
 			}
 
 			return null;
