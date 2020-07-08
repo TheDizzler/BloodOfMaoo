@@ -3,14 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
-
+using static AtomosZ.BoMII.Terrain.TerrainTileBase;
 
 namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainTile : MonoBehaviour
 	{
-		public enum CardinalTiles { NE, N, NW, SW, S, SE };
-
 		//public TerrainType terrainType = TerrainType.NotSet;
 		[SerializeField] private TerrainTileBase tileBase = null;
 		private SpawnTile[] spawnTiles = new SpawnTile[6];
@@ -51,22 +49,22 @@ namespace AtomosZ.BoMII.Terrain
 				switch (child.name)
 				{
 					case "TileSpawnPoint - NE":
-						spawnTiles[(int)CardinalTiles.NE] = child;
+						spawnTiles[(int)Cardinality.NE] = child;
 						break;
 					case "TileSpawnPoint - N":
-						spawnTiles[(int)CardinalTiles.N] = child;
+						spawnTiles[(int)Cardinality.N] = child;
 						break;
 					case "TileSpawnPoint - NW":
-						spawnTiles[(int)CardinalTiles.NW] = child;
+						spawnTiles[(int)Cardinality.NW] = child;
 						break;
 					case "TileSpawnPoint - SW":
-						spawnTiles[(int)CardinalTiles.SW] = child;
+						spawnTiles[(int)Cardinality.SW] = child;
 						break;
 					case "TileSpawnPoint - S":
-						spawnTiles[(int)CardinalTiles.S] = child;
+						spawnTiles[(int)Cardinality.S] = child;
 						break;
 					case "TileSpawnPoint - SE":
-						spawnTiles[(int)CardinalTiles.SE] = child;
+						spawnTiles[(int)Cardinality.SE] = child;
 						break;
 					default:
 						Debug.LogError("Shit is fucked in TerrainTile Town: " + child.name);

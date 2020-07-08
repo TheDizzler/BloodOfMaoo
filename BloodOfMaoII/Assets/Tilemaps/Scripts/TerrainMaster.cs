@@ -3,14 +3,13 @@ using System.Collections.Generic;
 using AtomosZ.BoMII.Terrain.Generators;
 using UnityEngine;
 using UnityEngine.Tilemaps;
-using static AtomosZ.BoMII.Terrain.TerrainTile;
-
+using static AtomosZ.BoMII.Terrain.TerrainTileBase;
 
 namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainMaster : MonoBehaviour
 	{
-		[SerializeField] private MapGenerator mapGenerator = null;
+		[SerializeField] private EndlessTerrain terrain = null;
 		// tilemap related variables
 		public Tilemap tilemap = null;
 		[SerializeField] private GenesisTile genesis = null;
@@ -56,7 +55,7 @@ namespace AtomosZ.BoMII.Terrain
 					genesis.SetTileValid(true);
 					if (Input.GetMouseButtonDown(0))
 					{
-						Debug.Log(tilepoint);
+						Debug.Log("Tilepoint: " + tilepoint);
 						RevealArea(worldpoint, 5);
 					}
 				}
@@ -130,14 +129,14 @@ namespace AtomosZ.BoMII.Terrain
 		private List<SpawnTile> CreateSpawnersAround(Vector3 worldPos)
 		{
 			List<SpawnTile> newSpawners = new List<SpawnTile>();
-			foreach (CardinalTiles dir in Enum.GetValues(typeof(CardinalTiles)))
+			foreach (Cardinality dir in Enum.GetValues(typeof(Cardinality)))
 			{
 				Vector3 worldtilepos = GetWorldOfTileAt(dir, worldPos);
 				SpawnTile newspawner = Instantiate(spawnTilePrefab, worldtilepos, Quaternion.identity, this.transform);
 				if (!newspawner.Overlaps())
 				{
 					newSpawners.Add(newspawner);
-					newspawner.name = Enum.GetName(typeof(CardinalTiles), dir);
+					newspawner.name = Enum.GetName(typeof(Cardinality), dir);
 				}
 				else
 					Destroy(newspawner.gameObject);
@@ -147,41 +146,29 @@ namespace AtomosZ.BoMII.Terrain
 		}
 
 
-		//private IEnumerator StartSimulation(List<SpawnTile> spawners, Vector3Int mappos)
-		//{
-		//	while (simulate)
-		//	{
-		//		foreach (SpawnTile tile in spawners)
-		//		{
-
-		//		}
-		//	}
-		//}
-
-
-		private Vector3 GetWorldOfTileAt(CardinalTiles direction, Vector3 worldpos)
+		private Vector3 GetWorldOfTileAt(Cardinality direction, Vector3 worldpos)
 		{
 			switch (direction)
 			{
-				case CardinalTiles.N:
+				case Cardinality.N:
 					worldpos.y += (int)cellsize.y;
 					break;
-				case CardinalTiles.S:
+				case Cardinality.S:
 					worldpos.y -= (int)cellsize.y;
 					break;
-				case CardinalTiles.SE:
+				case Cardinality.SE:
 					worldpos.x += (int)cellsize.x * .75f;
 					worldpos.y -= (int)cellsize.y * .5f;
 					break;
-				case CardinalTiles.SW:
+				case Cardinality.SW:
 					worldpos.x -= (int)cellsize.x * .75f;
 					worldpos.y -= (int)cellsize.y * .5f;
 					break;
-				case CardinalTiles.NE:
+				case Cardinality.NE:
 					worldpos.x += (int)cellsize.x * .75f;
 					worldpos.y += (int)cellsize.y * .5f;
 					break;
-				case CardinalTiles.NW:
+				case Cardinality.NW:
 					worldpos.x -= (int)cellsize.x * .75f;
 					worldpos.y += (int)cellsize.y * .5f;
 					break;
