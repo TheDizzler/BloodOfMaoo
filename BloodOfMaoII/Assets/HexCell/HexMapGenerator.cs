@@ -113,8 +113,6 @@ namespace AtomosZ.BoMII.Terrain
 					DestroyImmediate(textHolder.GetChild(i).gameObject);
 			}
 
-
-			//map = new int[width, height];
 			RandomFillMap();
 
 			for (int i = 0; i < smoothSteps; ++i)
@@ -216,23 +214,15 @@ namespace AtomosZ.BoMII.Terrain
 				case Cardinality.N:
 					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(1, 0, 0));
 				case Cardinality.NE: // !!
-					if (coordinates.y % 2 == 0)
-						return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(0, 1, 0));
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(1, 1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2, 1, 0));
 				case Cardinality.SE:
-					if (coordinates.y % 2 == 0)
-						return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(-1, 1, 0));
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(-1, 1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2 - 1, 1, 0));
 				case Cardinality.S:
 					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(-1, 0, 0));
 				case Cardinality.SW:
-					if (coordinates.y % 2 == 0)
-						return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(-1, -1, 0));
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(0, -1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2 - 1, -1, 0));
 				case Cardinality.NW:
-					if (coordinates.y % 2 == 0)
-						return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(0, -1, 0));
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(1, -1, 0));
+					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(coordinates.y % 2, -1, 0));
 			}
 
 			return null;
