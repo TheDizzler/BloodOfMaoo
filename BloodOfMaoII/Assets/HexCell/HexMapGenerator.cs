@@ -23,11 +23,13 @@ namespace AtomosZ.BoMII.Terrain
 		[Range(10, 100)]
 		public int randomFillPercent;
 		public int smoothSteps = 5;
-		[Tooltip("A value of 4 is standard. A value of 5 with randomFillPercent" +
+		[Tooltip("Standard square Cells: Range(3,6)" +
+			"\nA value of 4 is standard. A value of 5 with randomFillPercent" +
 			"around 63 generates very eerie-looking platforms after 6 or 7 smooth steps. (try seed = Test Seed)" +
-			"\nValues of 3 or 6 creates The Nothing.")]
-		[Range(3, 6)]
-		public int minNeighboursToSurvive = 4;
+			"\nValues of 3 or 6 creates The Nothing." +
+			"\nHex Cells: Range(2,5)\nAny value other than 3 is really unstable.")]
+		[Range(2, 5)]
+		public int minNeighboursToTurnBlack = 3;
 		[Tooltip("Minimum size of wall or pillar that can exist (will be filled in with empty space)")]
 		public int wallThresholdSize = 15;
 		[Tooltip("Minimum size of room that can exist (will be filled in with wall)")]
@@ -37,6 +39,8 @@ namespace AtomosZ.BoMII.Terrain
 		public int borderSize = 1;
 		[Tooltip("Whether the border can be culled in the smoothing step.")]
 		public bool keepBorder;
+		[Tooltip("For heavy debugging of cells. Generation is slow. Use small maps.")]
+		public bool debugCells;
 
 		public TerrainTileBase blackTile;
 		public TerrainTileBase whiteTile;
@@ -114,6 +118,8 @@ namespace AtomosZ.BoMII.Terrain
 			}
 
 			RandomFillMap();
+			if (debugCells)
+				DebugWallCount();
 
 			for (int i = 0; i < smoothSteps; ++i)
 			{
@@ -145,10 +151,82 @@ namespace AtomosZ.BoMII.Terrain
 
 		public bool SmoothMap(bool regenerateMeshImmediately = false)
 		{
-			//int[,] last = (int[,])map.Clone();
-			for (int x = keepBorder ? 1 : 0; x < (keepBorder ? width - 1 : width); ++x)
+			TerrainTileBase.TerrainType[,] newMap = new TerrainTileBase.TerrainType[width, height];
+			for (int x = 0; x < width; ++x)
 			{
-				for (int y = keepBorder ? 1 : 0; y < (keepBorder ? height - 1 : height); ++y)
+				for (int y = 0; y < height; ++y)
+				{
+					if (keepBorder
+						&& y == 0 || x == 0 || x == width - 1 || y == height - 1)
+					{
+						newMap[x, y] = (int)TerrainTileBase.TerrainType.Black;
+						continue;
+					}
+
+					Vector3Int coords = GetOffsetCoords(x, y);
+					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
+
+					if (centerTile == null)
+					{
+						Debug.LogError("no tile: " + coords + " (x: " + x + "y: " + y + ")");
+						continue;
+					}
+
+					int wallCount = 0;
+					TerrainTileBase[] surroundingTiles = GetSurroundingTiles(centerTile.coordinates);
+					foreach (TerrainTileBase tile in surroundingTiles)
+					{
+						if (tile == null || tile.type == TerrainTileBase.TerrainType.Black)
+							++wallCount;
+					}
+
+
+					if (wallCount > minNeighboursToTurnBlack)
+					{
+						newMap[x, y] = TerrainTileBase.TerrainType.Black;
+					}
+					else if (wallCount < minNeighboursToTurnBlack)
+					{
+						newMap[x, y] = TerrainTileBase.TerrainType.White;
+					}
+					else
+						newMap[x, y] = centerTile.type;
+				}
+			}
+
+			bool changesMade = false;
+			for (int x = 0; x < width; ++x)
+			{
+				for (int y = 0; y < height; ++y)
+				{
+					Vector3Int coords = GetOffsetCoords(x, y);
+					TerrainTileBase tile = tilemap.GetTile<TerrainTileBase>(coords);
+					if (newMap[x, y] != tile.type)
+					{
+						if (tile.type != TerrainTileBase.TerrainType.Black)
+							tile = CreateAndSetTile(coords, blackTile, tile);
+						else
+							tile = CreateAndSetTile(coords, whiteTile, tile);
+
+						changesMade = true;
+					}
+				}
+			}
+
+			if (debugCells && changesMade)
+			{
+				DebugWallCount();
+			}
+
+			return changesMade;
+		}
+
+
+		private void DebugWallCount()
+		{
+			for (int x = 0; x < width; ++x)
+			{
+				for (int y = 0; y < height; ++y)
 				{
 					Vector3Int coords = GetOffsetCoords(x, y);
 					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
@@ -167,44 +245,11 @@ namespace AtomosZ.BoMII.Terrain
 							++wallCount;
 					}
 
-
-					if (wallCount < minNeighboursToSurvive)
-					{
-						if (centerTile.type == TerrainTileBase.TerrainType.White)
-						{
-							centerTile = CreateAndSetTile(coords, blackTile, centerTile); // Change must happen AFTER all tiles checked!
-						}
-					}
-					else if (wallCount > minNeighboursToSurvive)
-					{
-						if (centerTile.type == TerrainTileBase.TerrainType.Black)
-						{
-							centerTile = CreateAndSetTile(coords, whiteTile, centerTile);   // Change must happen AFTER all tiles checked!
-						}
-					}
-
 					centerTile.text.SetText(centerTile.coordinates + "\nWallCount: " + wallCount);
 				}
 			}
-
-			//for (int x = 0; x < width; ++x)
-			//{
-			//	for (int y = 0; y < height; ++y)
-			//	{
-			//		if (last[x, y] != map[x, y])
-			//		{
-			//			if (regenerateMeshImmediately)
-			//			{
-			//				ProcessMap();
-			//			}
-
-			//			return true;
-			//		}
-			//	}
-			//}
-
-			return false;
 		}
+
 
 		private TerrainTileBase[] GetSurroundingTiles(Vector3Int tileCoords)
 		{
@@ -306,21 +351,23 @@ namespace AtomosZ.BoMII.Terrain
 			TerrainTileBase newTile = Instantiate(tilePrefab);
 			newTile.coordinates = coord;
 
-
-			if (originalTile == null)
+			if (debugCells)
 			{
-				GameObject newObj = Instantiate(locTextPrefab);
-				Vector3 worldPoint = tilemap.CellToWorld(coord);
-				newObj.transform.position = worldPoint;
-				newObj.transform.SetParent(textHolder, true);
-				TextMeshPro text = newObj.GetComponent<TextMeshPro>();
-				text.name = coord.ToString();
-				text.SetText(coord.ToString() + "\nWallCount: " + 0);
-				newTile.text = text;
-			}
-			else
-			{
-				newTile.text = originalTile.text;
+				if (originalTile == null)
+				{
+					GameObject newObj = Instantiate(locTextPrefab);
+					Vector3 worldPoint = tilemap.CellToWorld(coord);
+					newObj.transform.position = worldPoint;
+					newObj.transform.SetParent(textHolder, true);
+					TextMeshPro text = newObj.GetComponent<TextMeshPro>();
+					text.name = coord.ToString();
+					text.SetText(coord.ToString() + "\nWallCount: " + 0);
+					newTile.text = text;
+				}
+				else
+				{
+					newTile.text = originalTile.text;
+				}
 			}
 
 			tilemap.SetTile(coord, newTile);
