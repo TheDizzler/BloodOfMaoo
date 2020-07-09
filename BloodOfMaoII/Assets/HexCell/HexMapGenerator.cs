@@ -146,19 +146,70 @@ namespace AtomosZ.BoMII.Terrain
 
 		private void ProcessMap()
 		{
-			//for (int x = 0; x < width; ++x)
-			//{
-			//	for (int y = 0; y < height; ++y)
-			//	{
-			//		Vector3Int loc = new Vector3Int(
-			//			Mathf.CeilToInt(-height * .5f) + y, Mathf.CeilToInt(-width * .5f) + x, 0);
-			//		TerrainTileBase tile = tilemap.GetTile<TerrainTileBase>(loc);
-			//		if (tile.IsChangedType())
-			//		{
-			//			tilemap.tile
-			//		}
-			//	}
-			//}
+			List<List<Vector3Int>> floorRegions = GetRegions(TerrainTileBase.TerrainType.White);
+			List<List<Vector3Int>> wallRegions = GetRegions(TerrainTileBase.TerrainType.Black);
+
+
+		}
+
+		private List<List<Vector3Int>> GetRegions(TerrainTileBase.TerrainType regionType)
+		{
+			List<List<Vector3Int>> regions = new List<List<Vector3Int>>();
+			Dictionary<Vector3Int, bool> mapFlags = new Dictionary<Vector3Int, bool>();
+
+			for (int x = 0; x < width; ++x) // need to change this to a spiralling check starting at 0,0
+			{
+				for (int y = 0; y < height; ++y)
+				{
+					Vector3Int coords = GetOffsetCoords(x, y);
+					TerrainTileBase tile = GetTile(coords);
+					if ((mapFlags.TryGetValue(coords, out bool searched) == true && searched == true) || tile.type != regionType)
+						continue;
+					List<Vector3Int> newRegion = GetRegionTiles(coords);
+					foreach (Vector3Int regionCoord in newRegion)
+						mapFlags[regionCoord] = true;
+					regions.Add(newRegion);
+				}
+			}
+
+			return regions;
+		}
+
+		private List<Vector3Int> GetRegionTiles(Vector3Int startCoordinates)
+		{
+			List<Vector3Int> tiles = new List<Vector3Int>();
+			Dictionary<Vector3Int, bool> mapFlags = new Dictionary<Vector3Int, bool>();
+
+			TerrainTileBase.TerrainType tileType = GetTile(startCoordinates).type;
+
+			Queue<Vector3Int> queue = new Queue<Vector3Int>();
+			queue.Enqueue(startCoordinates); // these are NOT offset, ie not world coords (start from 0,0, positive only)
+
+			mapFlags[startCoordinates] = true;
+
+			while (queue.Count > 0)
+			{
+				Vector3Int checkTile = queue.Dequeue();
+				tiles.Add(checkTile);
+
+				TerrainTileBase[] surroundingTiles = GetSurroundingTiles(checkTile);
+				foreach (TerrainTileBase neighbour in surroundingTiles)
+				{
+					if (neighbour == null)
+						continue;
+
+					if (mapFlags.TryGetValue(neighbour.coordinates, out bool searched) == false && neighbour.type == tileType)
+					{
+						queue.Enqueue(neighbour.coordinates);
+						neighbour.text.SetText(tileType.ToString());
+					}
+
+					
+					mapFlags[neighbour.coordinates] = true;
+				}
+			}
+
+			return tiles;
 		}
 
 
