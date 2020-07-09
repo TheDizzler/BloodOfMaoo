@@ -1,4 +1,5 @@
-﻿using TMPro;
+﻿using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using static AtomosZ.BoMII.Terrain.TerrainTileBase;
@@ -13,8 +14,9 @@ namespace AtomosZ.BoMII.Terrain
 		public static float outerRadius = 10f;
 		public static float innerRadius = outerRadius * 0.866025404f;
 
-		public string seed;
+		public string stableSeed;
 		public bool useRandomSeed;
+		public string randomSeed;
 		public int width;
 		public int height;
 		[Tooltip("Minimum neighbours 4:\n\t40 to 45: Large caverns.\n\t45 to 50: caves." +
@@ -94,6 +96,16 @@ namespace AtomosZ.BoMII.Terrain
 			return true;
 		}
 
+		public TerrainTileBase GetTile(Vector3Int worldCoords)
+		{
+			return tilemap.GetTile<TerrainTileBase>(worldCoords);
+		}
+
+		public TerrainTileBase GetTile(int x, int y)
+		{
+			return tilemap.GetTile<TerrainTileBase>(GetOffsetCoords(x, y));
+		}
+
 		public void ClearMap()
 		{
 			tilemap.ClearAllTiles();
@@ -105,6 +117,7 @@ namespace AtomosZ.BoMII.Terrain
 					DestroyImmediate(textHolder.GetChild(i).gameObject);
 			}
 		}
+
 
 		public void GenerateMap()
 		{
@@ -268,17 +281,17 @@ namespace AtomosZ.BoMII.Terrain
 			switch (cardinality)
 			{
 				case Cardinality.N:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(1, 0, 0));
+					return GetTile(coordinates + new Vector3Int(1, 0, 0));
 				case Cardinality.NE: // !!
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2, 1, 0));
+					return GetTile(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2, 1, 0));
 				case Cardinality.SE:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2 - 1, 1, 0));
+					return GetTile(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2 - 1, 1, 0));
 				case Cardinality.S:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(-1, 0, 0));
+					return GetTile(coordinates + new Vector3Int(-1, 0, 0));
 				case Cardinality.SW:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2 - 1, -1, 0));
+					return GetTile(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2 - 1, -1, 0));
 				case Cardinality.NW:
-					return tilemap.GetTile<TerrainTileBase>(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2, -1, 0));
+					return GetTile(coordinates + new Vector3Int(System.Math.Abs(coordinates.y) % 2, -1, 0));
 			}
 
 			return null;
@@ -319,11 +332,10 @@ namespace AtomosZ.BoMII.Terrain
 
 		private void RandomFillMap()
 		{
-			string randomSeed;
 			if (useRandomSeed)
 				randomSeed = Time.time.ToString();
 			else
-				randomSeed = seed;
+				randomSeed = stableSeed;
 
 			System.Random rng = new System.Random(randomSeed.GetHashCode());
 
@@ -377,10 +389,15 @@ namespace AtomosZ.BoMII.Terrain
 
 		private Vector3Int GetOffsetCoords(int x, int y)
 		{
-			//return new Vector3Int(y, x, 0);
 			return new Vector3Int(
 						Mathf.CeilToInt(-height * .5f) + y,
 						Mathf.CeilToInt(-width * .5f) + x, 0);
 		}
+
+		private bool IsInMapRange(int x, int y)
+		{
+			return x >= 0 && y >= 0 && x < width && y < height;
+		}
+
 	}
 }
