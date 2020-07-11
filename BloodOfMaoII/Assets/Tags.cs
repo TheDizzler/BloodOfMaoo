@@ -2,6 +2,7 @@
 {
 	public static class Tags
 	{
+		public static string HexMapGenerator = "HexMapGenerator";
 		public static string TerrainTile = "TerrainTile";
 		public static string TerrainTilemap = "TerrainTileMap";
 		public static string Genesis = "GenesisTile";

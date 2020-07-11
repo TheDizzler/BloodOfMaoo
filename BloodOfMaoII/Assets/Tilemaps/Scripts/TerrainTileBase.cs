@@ -17,12 +17,7 @@ namespace AtomosZ.BoMII.Terrain
 		public Vector3Int coordinates;
 		public TextMeshPro text;
 
-		private Tilemap tilemap;
 
 
-		private void OnEnable()
-		{
-			tilemap = GameObject.FindGameObjectWithTag(Tags.TerrainTilemap).GetComponent<Tilemap>();
-		}
 	}
 }

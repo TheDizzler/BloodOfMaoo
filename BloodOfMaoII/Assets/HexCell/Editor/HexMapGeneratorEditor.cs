@@ -10,8 +10,6 @@ namespace AtomosZ.BoMII.Terrain
 		public override void OnInspectorGUI()
 		{
 			HexMapGenerator mapGen = (HexMapGenerator)target;
-			if (!mapGen.IsMapExist())
-				mapGen.GenerateMap();
 
 			if (GUILayout.Button("Generate") || DrawDefaultInspector())
 			{
@@ -25,7 +23,7 @@ namespace AtomosZ.BoMII.Terrain
 			}
 
 			if (GUILayout.Button("Clear Tile Map"))
-				mapGen.ClearMap();			
+				mapGen.ClearMap();
 		}
 	}
 }

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7b82b45f7d8b4c64b91485680200ba2a, type: 3}
   m_Name: BlackTile
   m_EditorClassIdentifier: 
-  m_Sprite: {fileID: -8663594851660633808, guid: b78518a418deeaf4085fe8da88b21404,
+  m_Sprite: {fileID: 7014126718402881849, guid: b78518a418deeaf4085fe8da88b21404,
     type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
@@ -33,5 +33,8 @@ MonoBehaviour:
     e32: 0
     e33: 1
   m_InstancedGameObject: {fileID: 0}
-  m_Flags: 1
+  m_Flags: 2
   m_ColliderType: 1
+  type: 0
+  coordinates: {x: 0, y: 0, z: 0}
+  text: {fileID: 0}

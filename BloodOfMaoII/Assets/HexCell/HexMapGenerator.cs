@@ -55,12 +55,17 @@ namespace AtomosZ.BoMII.Terrain
 		private Camera cam = null;
 		private Vector3 cellsize;
 
+		private TerrainTileBase startTile;
+		private TerrainTileBase currentTile;
+		private List<Vector3Int> lastLine = new List<Vector3Int>();
+
 
 		void Start()
 		{
 			cam = Camera.main;
 			cellsize = tilemap.cellSize;
 			ClearMap();
+			GenerateMap();
 		}
 
 		void Update()
@@ -73,37 +78,66 @@ namespace AtomosZ.BoMII.Terrain
 				Vector3 worldpoint = ray.GetPoint(hitDist);
 				Vector3Int tilepoint = tilemap.WorldToCell(worldpoint);
 
-				TileBase tile = tilemap.GetTile(tilepoint);
-				if (tile != null)
+				TerrainTileBase tile = GetTile(tilepoint);
+
+				if (startTile != null)
 				{
-					if (Input.GetMouseButtonDown(0))
-						Debug.Log(tilepoint);
+					foreach (Vector3Int lineTile in lastLine)
+						tilemap.SetColor(lineTile, Color.white);
+					lastLine.Clear();
+
+					if (Input.GetMouseButtonUp(0))
+					{
+						startTile = null;
+					}
+					else
+					{
+						List<Vector3Int> line = HexTools.GetLine(startTile.coordinates, tilepoint);
+						foreach (Vector3Int lineTile in line)
+						{
+							tilemap.SetColor(lineTile, Color.yellow);
+						}
+
+						lastLine = line;
+					}
 				}
 				else
 				{
-					if (Input.GetMouseButtonDown(0))
+					if (tile != null)
 					{
-						Debug.Log("Tilepoint: " + tilepoint);
+						if (Input.GetMouseButtonDown(0))
+						{
+							Debug.Log("Coords: " + tilepoint);
+							startTile = tile;
+						}
+					}
+					else
+					{
+						if (Input.GetMouseButtonDown(0))
+						{
+							Debug.Log("Null Tilepoint: " + tilepoint);
+						}
 					}
 				}
 			}
-
 		}
 
 
-		public bool IsMapExist()
+		public TerrainTileBase GetTile(Vector3Int offsetGridCoords)
 		{
-			return true;
+			return tilemap.GetTile<TerrainTileBase>(offsetGridCoords);
 		}
 
-		public TerrainTileBase GetTile(Vector3Int worldCoords)
-		{
-			return tilemap.GetTile<TerrainTileBase>(worldCoords);
-		}
-
+		/// <summary>
+		/// WARNING: This is probably not going to be dangerous after map gen.
+		/// Use GetTile(Vector3Int offsetGridCoords) instead.
+		/// </summary>
+		/// <param name="x"></param>
+		/// <param name="y"></param>
+		/// <returns></returns>
 		public TerrainTileBase GetTile(int x, int y)
 		{
-			return tilemap.GetTile<TerrainTileBase>(GetOffsetCoords(x, y));
+			return tilemap.GetTile<TerrainTileBase>(ArrayToOffsetCoords(x, y));
 		}
 
 		public void ClearMap()
@@ -131,8 +165,8 @@ namespace AtomosZ.BoMII.Terrain
 			}
 
 			RandomFillMap();
-			if (debugCells)
-				DebugWallCount();
+			//if (debugCells)
+			//	DebugWallCount();
 
 			for (int i = 0; i < smoothSteps; ++i)
 			{
@@ -146,11 +180,133 @@ namespace AtomosZ.BoMII.Terrain
 
 		private void ProcessMap()
 		{
-			List<List<Vector3Int>> floorRegions = GetRegions(TerrainTileBase.TerrainType.White);
 			List<List<Vector3Int>> wallRegions = GetRegions(TerrainTileBase.TerrainType.Black);
+			foreach (List<Vector3Int> wallRegion in wallRegions)
+				if (wallRegion.Count < wallThresholdSize)
+					foreach (Vector3Int coord in wallRegion)
+						CreateAndSetTile(coord, whiteTile, GetTile(coord));
+
+			List<List<Vector3Int>> roomRegions = GetRegions(TerrainTileBase.TerrainType.White);
+			List<Region> survivingRegions = new List<Region>();
+			foreach (List<Vector3Int> roomRegion in roomRegions)
+			{
+				if (roomRegion.Count < roomThresholdSize)
+					foreach (Vector3Int coord in roomRegion)
+						CreateAndSetTile(coord, blackTile, GetTile(coord));
+				else
+					survivingRegions.Add(new Region(roomRegion, tilemap));
+			}
+
+			if (survivingRegions.Count == 0)
+			{
+				Debug.Log("Map contains no rooms!");
+				return;
+			}
+
+			survivingRegions.Sort();
+			survivingRegions[0].isMainRegion = true;
+			survivingRegions[0].isAccessibleFromMainRegion = true;
+
+			ConnectClosestRegions(survivingRegions);
+		}
+
+		private void ConnectClosestRegions(List<Region> allRegions, bool forceAccessibilityFromMainRegion = false)
+		{
+			List<Region> regionListA = new List<Region>();
+			List<Region> regionListB = new List<Region>();
+
+			if (forceAccessibilityFromMainRegion)
+			{
+				foreach (Region region in allRegions)
+				{
+					if (!region.isAccessibleFromMainRegion)
+						regionListA.Add(region);
+					else
+						regionListB.Add(region);
+				}
+			}
+			else
+			{
+				regionListA = allRegions;
+				regionListB = allRegions;
+			}
+
+			/* making this a float will find the true shortest distance, however, as an int
+			 * I think the final results are more interesting as you can end up with
+			 multiple passages to the same room. */
+			int shortestDist = 0;
+			Vector3Int bestTileA = new Vector3Int();
+			Vector3Int bestTileB = new Vector3Int();
+			Region bestRegionA = new Region();
+			Region bestRegionB = new Region();
+
+			bool possibleConnectionFound = false;
+
+			foreach (Region regionA in regionListA)
+			{
+				if (!forceAccessibilityFromMainRegion)
+				{
+					possibleConnectionFound = false;
+					if (regionA.connectedRegions.Count > 0)
+						continue;
+				}
+
+				foreach (Region regionB in regionListB)
+				{
+					if (regionA == regionB || regionA.IsConnected(regionB))
+						continue;
+
+					for (int tileIndexA = 0; tileIndexA < regionA.edgeTiles.Count; ++tileIndexA)
+					{
+						for (int tileIndexB = 0; tileIndexB < regionB.edgeTiles.Count; ++tileIndexB)
+						{
+							Vector3Int tileA = regionA.edgeTiles[tileIndexA];
+							Vector3Int tileB = regionB.edgeTiles[tileIndexB];
+							float distanceBetweenRooms = Vector3Int.Distance(tileA, tileB);
+
+							if (distanceBetweenRooms < shortestDist || !possibleConnectionFound)
+							{
+								shortestDist = (int)distanceBetweenRooms;
+								possibleConnectionFound = true;
+								bestTileA = tileA;
+								bestTileB = tileB;
+								bestRegionA = regionA;
+								bestRegionB = regionB;
+							}
+						}
+					}
+				}
+
+				if (possibleConnectionFound && !forceAccessibilityFromMainRegion)
+				{
+					CreatePassage(bestRegionA, bestRegionB, bestTileA, bestTileB);
+				}
+			}
+
+			if (possibleConnectionFound && forceAccessibilityFromMainRegion)
+			{
+				CreatePassage(bestRegionA, bestRegionB, bestTileA, bestTileB);
+				ConnectClosestRegions(allRegions, true);
+			}
+
+			if (!forceAccessibilityFromMainRegion)
+				ConnectClosestRegions(allRegions, true);
+		}
+
+		private void CreatePassage(Region regionA, Region regionB, Vector3Int tileA, Vector3Int tileB)
+		{
+			Region.ConnectRegions(regionA, regionB);
+			Debug.DrawLine(tilemap.CellToWorld(tileA), tilemap.CellToWorld(tileB), Color.green, 10);
+
+			List<Vector3Int> line = HexTools.GetLine(tileA, tileB);
+			foreach (Vector3Int tileCoord in line)
+			{
+				tilemap.SetColor(tileCoord, Color.red);
+			}
 
 
 		}
+
 
 		private List<List<Vector3Int>> GetRegions(TerrainTileBase.TerrainType regionType)
 		{
@@ -161,7 +317,7 @@ namespace AtomosZ.BoMII.Terrain
 			{
 				for (int y = 0; y < height; ++y)
 				{
-					Vector3Int coords = GetOffsetCoords(x, y);
+					Vector3Int coords = ArrayToOffsetCoords(x, y);
 					TerrainTileBase tile = GetTile(coords);
 					if ((mapFlags.TryGetValue(coords, out bool searched) == true && searched == true) || tile.type != regionType)
 						continue;
@@ -201,10 +357,9 @@ namespace AtomosZ.BoMII.Terrain
 					if (mapFlags.TryGetValue(neighbour.coordinates, out bool searched) == false && neighbour.type == tileType)
 					{
 						queue.Enqueue(neighbour.coordinates);
-						neighbour.text.SetText(tileType.ToString());
 					}
 
-					
+
 					mapFlags[neighbour.coordinates] = true;
 				}
 			}
@@ -212,7 +367,11 @@ namespace AtomosZ.BoMII.Terrain
 			return tiles;
 		}
 
-
+		/// <summary>
+		/// TODO: change from 2darray based to spiraling out from a center point
+		/// </summary>
+		/// <param name="regenerateMeshImmediately"></param>
+		/// <returns></returns>
 		public bool SmoothMap(bool regenerateMeshImmediately = false)
 		{
 			TerrainTileBase.TerrainType[,] newMap = new TerrainTileBase.TerrainType[width, height];
@@ -227,7 +386,7 @@ namespace AtomosZ.BoMII.Terrain
 						continue;
 					}
 
-					Vector3Int coords = GetOffsetCoords(x, y);
+					Vector3Int coords = ArrayToOffsetCoords(x, y);
 					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
 
 					if (centerTile == null)
@@ -263,7 +422,7 @@ namespace AtomosZ.BoMII.Terrain
 			{
 				for (int y = 0; y < height; ++y)
 				{
-					Vector3Int coords = GetOffsetCoords(x, y);
+					Vector3Int coords = ArrayToOffsetCoords(x, y);
 					TerrainTileBase tile = tilemap.GetTile<TerrainTileBase>(coords);
 					if (newMap[x, y] != tile.type)
 					{
@@ -277,45 +436,16 @@ namespace AtomosZ.BoMII.Terrain
 				}
 			}
 
-			if (debugCells && changesMade)
-			{
-				DebugWallCount();
-			}
+			//if (debugCells && changesMade)
+			//{
+			//	DebugWallCount();
+			//}
 
 			return changesMade;
 		}
 
 
-		private void DebugWallCount()
-		{
-			for (int x = 0; x < width; ++x)
-			{
-				for (int y = 0; y < height; ++y)
-				{
-					Vector3Int coords = GetOffsetCoords(x, y);
-					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
-
-					if (centerTile == null)
-					{
-						Debug.Log("no tile: " + coords + " (x: " + x + "y: " + y + ")");
-						continue;
-					}
-
-					int wallCount = 0;
-					TerrainTileBase[] surroundingTiles = GetSurroundingTiles(centerTile.coordinates);
-					foreach (TerrainTileBase tile in surroundingTiles)
-					{
-						if (tile == null || tile.type == TerrainTileBase.TerrainType.Black)
-							++wallCount;
-					}
-
-					centerTile.text.SetText(centerTile.coordinates + "\nWallCount: " + wallCount);
-				}
-			}
-		}
-
-
-		private TerrainTileBase[] GetSurroundingTiles(Vector3Int tileCoords)
+		public TerrainTileBase[] GetSurroundingTiles(Vector3Int tileCoords)
 		{
 			TerrainTileBase[] tiles = new TerrainTileBase[6];
 			tiles[0] = GetAdjacentTileTo(tileCoords, Cardinality.N);
@@ -394,7 +524,7 @@ namespace AtomosZ.BoMII.Terrain
 			{
 				for (int y = 0; y < height; ++y)
 				{
-					Vector3Int coord = GetOffsetCoords(x, y);
+					Vector3Int coord = ArrayToOffsetCoords(x, y);
 
 					if (y == 0 || x == 0 || y == height - 1 || x == width - 1
 						|| rng.Next(0, 100) < randomFillPercent)
@@ -424,13 +554,19 @@ namespace AtomosZ.BoMII.Terrain
 					newObj.transform.SetParent(textHolder, true);
 					TextMeshPro text = newObj.GetComponent<TextMeshPro>();
 					text.name = coord.ToString();
-					text.SetText(coord.ToString() + "\nWallCount: " + 0);
+					text.SetText(coord.ToString() + "\n" + HexTools.OffsetToCube(coord));
 					newTile.text = text;
 				}
 				else
 				{
 					newTile.text = originalTile.text;
+					newTile.text.SetText(coord.ToString() + "\n" + HexTools.OffsetToCube(coord));
 				}
+			}
+
+			if (originalTile != null)
+			{
+				tilemap.SetTile(coord, null);
 			}
 
 			tilemap.SetTile(coord, newTile);
@@ -438,7 +574,7 @@ namespace AtomosZ.BoMII.Terrain
 		}
 
 
-		private Vector3Int GetOffsetCoords(int x, int y)
+		private Vector3Int ArrayToOffsetCoords(int x, int y)
 		{
 			return new Vector3Int(
 						Mathf.CeilToInt(-height * .5f) + y,
@@ -450,5 +586,33 @@ namespace AtomosZ.BoMII.Terrain
 			return x >= 0 && y >= 0 && x < width && y < height;
 		}
 
+
+		private void DebugWallCount()
+		{
+			for (int x = 0; x < width; ++x)
+			{
+				for (int y = 0; y < height; ++y)
+				{
+					Vector3Int coords = ArrayToOffsetCoords(x, y);
+					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
+
+					if (centerTile == null)
+					{
+						Debug.Log("no tile: " + coords + " (x: " + x + "y: " + y + ")");
+						continue;
+					}
+
+					int wallCount = 0;
+					TerrainTileBase[] surroundingTiles = GetSurroundingTiles(centerTile.coordinates);
+					foreach (TerrainTileBase tile in surroundingTiles)
+					{
+						if (tile == null || tile.type == TerrainTileBase.TerrainType.Black)
+							++wallCount;
+					}
+
+					centerTile.text.SetText(centerTile.coordinates + "\nWallCount: " + wallCount);
+				}
+			}
+		}
 	}
 }
