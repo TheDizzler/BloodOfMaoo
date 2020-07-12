@@ -18,28 +18,31 @@ namespace AtomosZ.BoMII.Terrain
 		public bool isAccessibleFromMainRegion;
 		public bool isMainRegion;
 
-		private Tilemap tilemap;
 
 
-		public Region(List<Vector3Int> regionTileCoords, Tilemap tilemap)
+		public Region(List<Vector3Int> regionTileCoords)
 		{
 			tileCoords = regionTileCoords;
-			this.tilemap = tilemap;
 			regionSize = regionTileCoords.Count;
+			
 			connectedRegions = new List<Region>();
 			edgeTiles = new List<Vector3Int>();
 
 			HexMapGenerator mapGenerator = GameObject.FindGameObjectWithTag(Tags.HexMapGenerator).GetComponent<HexMapGenerator>();
+			regionType = mapGenerator.GetTile(regionTileCoords[0]).type;
 
 			foreach (Vector3Int coord in tileCoords)
 			{
 				TerrainTileBase[] surroundingTiles = mapGenerator.GetSurroundingTiles(coord);
 				foreach (TerrainTileBase ttb in surroundingTiles)
 				{
-					if (ttb == null)
+					if (ttb == null) // should we consider the map edge to be a tile edge?
 						continue;
 					if (ttb.type != regionType)
+					{
 						edgeTiles.Add(coord); // if we don't break here we'll get an edge tile per face instead of per tile
+						break;
+					}
 				}
 			}
 		}

@@ -194,7 +194,7 @@ namespace AtomosZ.BoMII.Terrain
 					foreach (Vector3Int coord in roomRegion)
 						CreateAndSetTile(coord, blackTile, GetTile(coord));
 				else
-					survivingRegions.Add(new Region(roomRegion, tilemap));
+					survivingRegions.Add(new Region(roomRegion));
 			}
 
 			if (survivingRegions.Count == 0)
