@@ -231,9 +231,6 @@ namespace AtomosZ.BoMII.Terrain
 				regionListB = allRegions;
 			}
 
-			/* making this a float will find the true shortest distance, however, as an int
-			 * I think the final results are more interesting as you can end up with
-			 multiple passages to the same room. */
 			int shortestDist = 0;
 			Vector3Int bestTileA = new Vector3Int();
 			Vector3Int bestTileB = new Vector3Int();
@@ -262,7 +259,7 @@ namespace AtomosZ.BoMII.Terrain
 						{
 							Vector3Int tileA = regionA.edgeTiles[tileIndexA];
 							Vector3Int tileB = regionB.edgeTiles[tileIndexB];
-							float distanceBetweenRooms = Vector3Int.Distance(tileA, tileB);
+							int distanceBetweenRooms = HexTools.DistanceInTiles(tileA, tileB);
 
 							if (distanceBetweenRooms < shortestDist || !possibleConnectionFound)
 							{
@@ -312,6 +309,8 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			List<List<Vector3Int>> regions = new List<List<Vector3Int>>();
 			Dictionary<Vector3Int, bool> mapFlags = new Dictionary<Vector3Int, bool>();
+
+
 
 			for (int x = 0; x < width; ++x) // need to change this to a spiralling check starting at 0,0
 			{
@@ -598,7 +597,7 @@ namespace AtomosZ.BoMII.Terrain
 
 					if (centerTile == null)
 					{
-						Debug.Log("no tile: " + coords + " (x: " + x + "y: " + y + ")");
+						Debug.LogError("no tile: " + coords + " (x: " + x + "y: " + y + ")");
 						continue;
 					}
 

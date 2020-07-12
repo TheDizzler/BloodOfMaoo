@@ -53,9 +53,9 @@ namespace AtomosZ.BoMII.Terrain
 		public static void ConnectRegions(Region regionA, Region regionB)
 		{
 			if (regionA.isAccessibleFromMainRegion)
-				regionB.isAccessibleFromMainRegion = true;
+				regionB.SetAccessibleFromMainRegion();
 			else if (regionB.isAccessibleFromMainRegion)
-				regionA.isAccessibleFromMainRegion = true;
+				regionA.SetAccessibleFromMainRegion();
 
 			regionA.connectedRegions.Add(regionB);
 			regionB.connectedRegions.Add(regionA);
@@ -71,6 +71,14 @@ namespace AtomosZ.BoMII.Terrain
 			return otherRegion.regionSize.CompareTo(regionSize);
 		}
 
-
+		private void SetAccessibleFromMainRegion()
+		{
+			if (!isAccessibleFromMainRegion)
+			{
+				isAccessibleFromMainRegion = true;
+				foreach (Region connectedRoom in connectedRegions)
+					connectedRoom.SetAccessibleFromMainRegion();
+			}
+		}
 	}
 }
