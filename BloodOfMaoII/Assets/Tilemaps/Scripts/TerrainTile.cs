@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using static AtomosZ.BoMII.Terrain.HexTools;
 using static AtomosZ.BoMII.Terrain.TerrainTileBase;
 
 namespace AtomosZ.BoMII.Terrain

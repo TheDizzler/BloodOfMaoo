@@ -15,9 +15,6 @@ namespace AtomosZ.BoMII.Terrain
 		public static float outerRadius = 10f;
 		public static float innerRadius = outerRadius * 0.866025404f;
 
-		public string stableSeed;
-		public bool useRandomSeed;
-		public string randomSeed;
 		public int width;
 		public int height;
 		[Tooltip("Minimum neighbours 4:\n\t40 to 45: Large caverns.\n\t45 to 50: caves." +
@@ -45,6 +42,9 @@ namespace AtomosZ.BoMII.Terrain
 		[Tooltip("For heavy debugging of cells. Generation is slow. Use small maps.")]
 		public bool debugCells;
 
+		public bool useNoise;
+
+		public NoiseSettings noiseSettings;
 		public TerrainTileBase blackTile;
 		public TerrainTileBase whiteTile;
 		public GameObject locTextPrefab;
@@ -123,7 +123,7 @@ namespace AtomosZ.BoMII.Terrain
 							tilemap.SetColor(lineTile, Color.magenta);
 						}
 
-						
+
 
 						lastLine = line;
 						lastRadius = radius;
@@ -193,9 +193,11 @@ namespace AtomosZ.BoMII.Terrain
 					DestroyImmediate(textHolder.GetChild(i).gameObject);
 			}
 
-			RandomFillMap();
-			//if (debugCells)
-			//	DebugWallCount();
+			if (useNoise)
+				NoiseFillMap();
+			else
+				RandomFillMap();
+
 
 			for (int i = 0; i < smoothSteps; ++i)
 			{
@@ -459,10 +461,7 @@ namespace AtomosZ.BoMII.Terrain
 						continue;
 
 					if (mapFlags.TryGetValue(neighbour.coordinates, out bool searched) == false && neighbour.type == tileType)
-					{
 						queue.Enqueue(neighbour.coordinates);
-					}
-
 
 					mapFlags[neighbour.coordinates] = true;
 				}
@@ -589,14 +588,29 @@ namespace AtomosZ.BoMII.Terrain
 		}
 
 
+		private void NoiseFillMap()
+		{
+			float[,] noiseMap = Noise.GenerateNoiseMap(
+				width, height,
+				noiseSettings, Vector2.zero);
+
+			for (int x = 0; x < width; ++x)
+			{
+				for (int y = 0; y < height; ++y)
+				{
+					Vector3Int coord = ArrayToOffsetCoords(x, y);
+
+					if (noiseMap[x,y] > randomFillPercent * .01f)
+						CreateAndSetTile(coord, whiteTile);
+					else
+						CreateAndSetTile(coord, blackTile);
+				}
+			}
+		}
+
 		private void RandomFillMap()
 		{
-			if (useRandomSeed)
-				randomSeed = Time.time.ToString();
-			else
-				randomSeed = stableSeed;
-
-			System.Random rng = new System.Random(randomSeed.GetHashCode());
+			System.Random rng = new System.Random(noiseSettings.GetSeed());
 
 			for (int x = 0; x < width; ++x)
 			{

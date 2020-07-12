@@ -24,7 +24,7 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			tileCoords = regionTileCoords;
 			regionSize = regionTileCoords.Count;
-			
+
 			connectedRegions = new List<Region>();
 			edgeTiles = new List<Vector3Int>();
 
