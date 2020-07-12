@@ -199,7 +199,7 @@ namespace AtomosZ.BoMII.Terrain
 
 			for (int i = 0; i < smoothSteps; ++i)
 			{
-				if (!SmoothMap())
+				if (!SmoothMap(Vector3Int.zero))
 					break;
 			}
 
@@ -474,33 +474,29 @@ namespace AtomosZ.BoMII.Terrain
 		/// <summary>
 		/// TODO: change from 2darray based to spiraling out from a center point
 		/// </summary>
-		/// <param name="regenerateMeshImmediately"></param>
 		/// <returns></returns>
-		public bool SmoothMap(bool regenerateMeshImmediately = false)
+		public bool SmoothMap(Vector3Int centerPoint, int radiusToSmooth = int.MaxValue)
 		{
-			TerrainTileBase.TerrainType[,] newMap = new TerrainTileBase.TerrainType[width, height];
-			for (int x = 0; x < width; ++x)
+			Dictionary<TerrainTileBase, TerrainTileBase.TerrainType> changesToMake =
+				new Dictionary<TerrainTileBase, TerrainTileBase.TerrainType>();
+			bool ringEmpty = false;
+			int i = 0;
+
+			while (i <= radiusToSmooth && !ringEmpty)
 			{
-				for (int y = 0; y < height; ++y)
+				ringEmpty = true;
+				List<Vector3Int> ring = HexTools.GetRing(centerPoint, i++);
+
+				foreach (Vector3Int ringTile in ring)
 				{
-					if (keepBorder
-						&& y == 0 || x == 0 || x == width - 1 || y == height - 1)
-					{
-						newMap[x, y] = (int)TerrainTileBase.TerrainType.Black;
+					TerrainTileBase ttb = GetTile(ringTile);
+					if (ttb == null)
 						continue;
-					}
 
-					Vector3Int coords = ArrayToOffsetCoords(x, y);
-					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
-
-					if (centerTile == null)
-					{
-						Debug.LogError("no tile: " + coords + " (x: " + x + "y: " + y + ")");
-						continue;
-					}
+					ringEmpty = false;
 
 					int wallCount = 0;
-					TerrainTileBase[] surroundingTiles = GetSurroundingTiles(centerTile.coordinates);
+					TerrainTileBase[] surroundingTiles = GetSurroundingTiles(ringTile);
 					foreach (TerrainTileBase tile in surroundingTiles)
 					{
 						if (tile == null || tile.type == TerrainTileBase.TerrainType.Black)
@@ -508,44 +504,22 @@ namespace AtomosZ.BoMII.Terrain
 					}
 
 
-					if (wallCount > minNeighboursToTurnBlack)
-					{
-						newMap[x, y] = TerrainTileBase.TerrainType.Black;
-					}
-					else if (wallCount < minNeighboursToTurnBlack)
-					{
-						newMap[x, y] = TerrainTileBase.TerrainType.White;
-					}
-					else
-						newMap[x, y] = centerTile.type;
+					if (wallCount > minNeighboursToTurnBlack && ttb.type != TerrainTileBase.TerrainType.Black)
+						changesToMake[ttb] = TerrainTileBase.TerrainType.Black;
+					else if (wallCount < minNeighboursToTurnBlack && ttb.type != TerrainTileBase.TerrainType.White)
+						changesToMake[ttb] = TerrainTileBase.TerrainType.White;
 				}
 			}
 
-			bool changesMade = false;
-			for (int x = 0; x < width; ++x)
+			foreach (var t in changesToMake)
 			{
-				for (int y = 0; y < height; ++y)
-				{
-					Vector3Int coords = ArrayToOffsetCoords(x, y);
-					TerrainTileBase tile = tilemap.GetTile<TerrainTileBase>(coords);
-					if (newMap[x, y] != tile.type)
-					{
-						if (tile.type != TerrainTileBase.TerrainType.Black)
-							tile = CreateAndSetTile(coords, blackTile, tile);
-						else
-							tile = CreateAndSetTile(coords, whiteTile, tile);
-
-						changesMade = true;
-					}
-				}
+				if (t.Value == TerrainTileBase.TerrainType.Black)
+					CreateAndSetTile(t.Key.coordinates, blackTile, t.Key);
+				else
+					CreateAndSetTile(t.Key.coordinates, whiteTile, t.Key);
 			}
 
-			//if (debugCells && changesMade)
-			//{
-			//	DebugWallCount();
-			//}
-
-			return changesMade;
+			return changesToMake.Count > 0;
 		}
 
 

@@ -18,7 +18,7 @@ namespace AtomosZ.BoMII.Terrain
 
 			if (GUILayout.Button("Next Step"))
 			{
-				mapGen.SmoothMap(true);
+				mapGen.SmoothMap(Vector3Int.zero);
 				SceneView.RepaintAll();
 			}
 
