@@ -16,6 +16,11 @@ namespace AtomosZ.BoMII.Terrain
 	public static class HexTools
 	{
 		/// <summary>
+		/// Circles counter-clockwise from N to NE.
+		/// </summary>
+		public enum Cardinality { N, NW, SW, S, SE, NE };
+
+		/// <summary>
 		/// There are times when cube_lerp will return a point that's exactly on 
 		/// the side between two hexes. Then cube_round will push it one way or 
 		/// the other. The lines will look better if it's always pushed in the same 
@@ -25,17 +30,61 @@ namespace AtomosZ.BoMII.Terrain
 		/// </summary>
 		public static readonly Vector3 epsilonCube = new Vector3(1E-6f, 2E-6f, -3E-6f);
 
-		public static readonly Dictionary<TerrainTileBase.Cardinality, Vector3Int> cubeDirections
-			= new Dictionary<TerrainTileBase.Cardinality, Vector3Int>()
+		public static readonly Dictionary<Cardinality, Vector3Int> cubeDirections
+			= new Dictionary<Cardinality, Vector3Int>()
 		{
-			{TerrainTileBase.Cardinality.N,  new Vector3Int( 0,  1, -1) },
-			{TerrainTileBase.Cardinality.NW, new Vector3Int(-1,  1,  0) },
-			{TerrainTileBase.Cardinality.SW, new Vector3Int(-1,  0,  1) },
-			{TerrainTileBase.Cardinality.S,  new Vector3Int( 0, -1,  1) },
-			{TerrainTileBase.Cardinality.SE, new Vector3Int( 1, -1,  0) },
-			{TerrainTileBase.Cardinality.NE, new Vector3Int( 1,  0, -1) },
+			{Cardinality.N,  new Vector3Int( 0,  1, -1) },
+			{Cardinality.NW, new Vector3Int(-1,  1,  0) },
+			{Cardinality.SW, new Vector3Int(-1,  0,  1) },
+			{Cardinality.S,  new Vector3Int( 0, -1,  1) },
+			{Cardinality.SE, new Vector3Int( 1, -1,  0) },
+			{Cardinality.NE, new Vector3Int( 1,  0, -1) },
 		};
 
+
+		/// <summary>
+		/// Takes in offset coords and returns in offset cords.
+		/// </summary>
+		/// <param name="center"></param>
+		/// <param name="radius"></param>
+		/// <returns></returns>
+		public static List<Vector3Int> GetRing(Vector3Int center, int radius)
+		{
+			List<Vector3Int> tiles = new List<Vector3Int>();
+			if (radius == 0)
+			{
+				tiles.Add(center);
+				return tiles;
+			}
+
+			
+			Vector3Int tile = OffsetToCube(center) + cubeDirections[Cardinality.SE] * radius;
+
+			for (int i = 0; i < 6; ++i)
+			{
+				for (int j = 0; j < radius; ++j)
+				{
+					tiles.Add(CubeToOffset(tile));
+					tile = GetCubeNeighbour(tile, (Cardinality)i);
+				}
+			}
+
+			return tiles;
+		}
+
+		private static Vector3Int GetCubeNeighbour(Vector3Int cubeCoord, Cardinality cardinality)
+		{
+			return cubeCoord + cubeDirections[cardinality];
+		}
+
+		public static List<Vector3Int> GetSpiral(Vector3Int center, int radius)
+		{
+			List<Vector3Int> tiles = new List<Vector3Int>();
+			for (int i = 0; i <= radius; ++i)
+				tiles.AddRange(GetRing(center, i));
+
+			return tiles;
+		}
 
 		/// <summary>
 		/// Returns a "circle" of tiles that are within the range and center specified.
@@ -92,7 +141,7 @@ namespace AtomosZ.BoMII.Terrain
 		/// </summary>
 		/// <param name="cubeCoords"></param>
 		/// <returns>in cube coordinates</returns>
-		public static Vector3Int CubeRound(Vector3 cubeCoords)
+		private static Vector3Int CubeRound(Vector3 cubeCoords)
 		{
 			int rx = Mathf.RoundToInt(cubeCoords.x);
 			int ry = Mathf.RoundToInt(cubeCoords.y);
@@ -112,7 +161,7 @@ namespace AtomosZ.BoMII.Terrain
 			return new Vector3Int(rx, ry, rz);
 		}
 
-		public static Vector3 CubeLerp(Vector3 cubeCoordsA, Vector3 cubeCoordsB, float t)
+		private static Vector3 CubeLerp(Vector3 cubeCoordsA, Vector3 cubeCoordsB, float t)
 		{
 			return new Vector3(
 				Mathf.Lerp(cubeCoordsA.x, cubeCoordsB.x, t),
@@ -152,7 +201,7 @@ namespace AtomosZ.BoMII.Terrain
 		/// </summary>
 		/// <param name="cubeCoords"></param>
 		/// <returns></returns>
-		public static Vector3Int CubeToOffset(Vector3Int cubeCoords)
+		private static Vector3Int CubeToOffset(Vector3Int cubeCoords)
 		{
 			int col = cubeCoords.x;
 			int row = cubeCoords.z + (cubeCoords.x - (cubeCoords.x & 1)) / 2;
@@ -166,7 +215,7 @@ namespace AtomosZ.BoMII.Terrain
 		/// <param name="cubeVectorA">MUST BE IN CUBE COORDINATE</param>
 		/// <param name="cubeVectorB">MUST BE IN CUBE COORDINAT</param>
 		/// <returns></returns>
-		public static int CubeDistance(Vector3Int cubeVectorA, Vector3Int cubeVectorB)
+		private static int CubeDistance(Vector3Int cubeVectorA, Vector3Int cubeVectorB)
 		{
 			return (int)(
 				(Math.Abs(cubeVectorA.x - cubeVectorB.x)

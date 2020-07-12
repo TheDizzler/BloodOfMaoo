@@ -2,7 +2,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
-using static AtomosZ.BoMII.Terrain.TerrainTileBase;
+using static AtomosZ.BoMII.Terrain.HexTools;
 
 namespace AtomosZ.BoMII.Terrain
 {
@@ -59,7 +59,7 @@ namespace AtomosZ.BoMII.Terrain
 		private TerrainTileBase currentTile;
 		private List<Vector3Int> lastLine = new List<Vector3Int>();
 		private List<Vector3Int> lastRadius = new List<Vector3Int>();
-
+		private List<Vector3Int> lastRing = new List<Vector3Int>();
 
 		void Start()
 		{
@@ -89,6 +89,10 @@ namespace AtomosZ.BoMII.Terrain
 					foreach (Vector3Int radiusTile in lastRadius)
 						tilemap.SetColor(radiusTile, Color.white);
 					lastRadius.Clear();
+					foreach (Vector3Int ringTile in lastRing)
+						tilemap.SetColor(ringTile, Color.white);
+					lastRing.Clear();
+
 
 					if (Input.GetMouseButtonUp(0))
 					{
@@ -97,12 +101,20 @@ namespace AtomosZ.BoMII.Terrain
 					else
 					{
 						int n = HexTools.DistanceInTiles(startTile.coordinates, tilepoint);
-						List<Vector3Int> radius = HexTools.GetTilesInRange(startTile.coordinates, n);
+						List<Vector3Int> radius =
+							HexTools.GetSpiral(startTile.coordinates, n);
+							//HexTools.GetTilesInRange(startTile.coordinates, n);
 						List<Vector3Int> line = HexTools.GetLine(startTile.coordinates, tilepoint);
+						List<Vector3Int> ring = HexTools.GetRing(startTile.coordinates, n);
 
 						foreach (Vector3Int radiusTile in radius)
 						{
 							tilemap.SetColor(radiusTile, Color.yellow);
+						}
+
+						foreach (Vector3Int radiusTile in ring)
+						{
+							tilemap.SetColor(radiusTile, Color.red);
 						}
 
 						foreach (Vector3Int lineTile in line)
@@ -114,6 +126,7 @@ namespace AtomosZ.BoMII.Terrain
 
 						lastLine = line;
 						lastRadius = radius;
+						lastRing = ring;
 					}
 				}
 				else
