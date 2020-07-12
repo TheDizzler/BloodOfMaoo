@@ -3,6 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using static AtomosZ.BoMII.Terrain.HexTools;
+using Debug = UnityEngine.Debug;
 
 namespace AtomosZ.BoMII.Terrain
 {
@@ -342,25 +343,92 @@ namespace AtomosZ.BoMII.Terrain
 			}
 		}
 
-		private List<List<Vector3Int>> GetRegions(TerrainTileBase.TerrainType regionType)
+		/// <summary>
+		/// Out of curiosity, did performance test between 3 region-gathering methods:
+		///		Array - start at (0,0), convert to offset coordinates
+		///		Ring - get rings around (0,0,0)
+		///		TilesBlock - use tilemap.GetTilesBlock() to get all cells in tilemap.cellbounds
+		/// 
+		/// On a 200x200 grid:
+		///			
+		///		Array:		00:00:00.1374806
+		///		Rings:		00:00:00.1682386
+		///		TileBlock:	00:00:00.1255588
+		///			Total tiles tagged: 19638
+		///		Array:		00:00:00.1491268
+		///		Rings:		00:00:00.1774484
+		///		TileBlock:	00:00:00.1388011
+		///			Total tiles tagged: 20407
+		///	
+		/// TileBlock is usually the fastest, and would have some usefulness outside of generation
+		///		although defining a bounds for an area to search is imprecise on a hex grid.
+		/// Rings is easily the slowest, but beign able to define any point and search a defined
+		///		radius around it is immensely useful.
+		///	Array is dangerous as you would have to define where [0,0] and the end condition.
+		/// </summary>
+		/// <param name="regionType"></param>
+		/// <param name="distanceToCheck"></param>
+		/// <returns></returns>
+		private List<List<Vector3Int>> GetRegions(TerrainTileBase.TerrainType regionType, int distanceToCheck = int.MaxValue)
+		{
+			return GetRegionsTilesBlockSearch(regionType);
+			//return RingSearch(regionType, distanceToCheck);
+		}
+
+		private List<List<Vector3Int>> GetRegionsTilesBlockSearch(TerrainTileBase.TerrainType regionType)
 		{
 			List<List<Vector3Int>> regions = new List<List<Vector3Int>>();
 			Dictionary<Vector3Int, bool> mapFlags = new Dictionary<Vector3Int, bool>();
 
+			TileBase[] allTiles = tilemap.GetTilesBlock(tilemap.cellBounds);
 
-
-			for (int x = 0; x < width; ++x) // need to change this to a spiralling check starting at 0,0
+			foreach (TileBase tb in allTiles)
 			{
-				for (int y = 0; y < height; ++y)
+				TerrainTileBase tbb = (TerrainTileBase)tb;
+				if ((mapFlags.TryGetValue(tbb.coordinates, out bool searched) == true && searched == true) || tbb.type != regionType)
+					continue;
+				List<Vector3Int> newRegion = GetRegionTiles(tbb.coordinates);
+				foreach (Vector3Int regionCoord in newRegion)
+					mapFlags[regionCoord] = true;
+
+				regions.Add(newRegion);
+			}
+
+			return regions;
+		}
+
+		private List<List<Vector3Int>> GetRegionsRingSearch(TerrainTileBase.TerrainType regionType, int distanceToCheck)
+		{
+			List<List<Vector3Int>> regions = new List<List<Vector3Int>>();
+			Dictionary<Vector3Int, bool> mapFlags = new Dictionary<Vector3Int, bool>();
+
+			Vector3Int centerCoords = Vector3Int.zero;
+			bool ringEmpty = false;
+			int i = 0;
+
+			while (i <= distanceToCheck && !ringEmpty)
+			{
+				ringEmpty = true;
+				List<Vector3Int> ring = HexTools.GetRing(centerCoords, i++);
+				foreach (Vector3Int ringTile in ring)
 				{
-					Vector3Int coords = ArrayToOffsetCoords(x, y);
-					TerrainTileBase tile = GetTile(coords);
-					if ((mapFlags.TryGetValue(coords, out bool searched) == true && searched == true) || tile.type != regionType)
+					TerrainTileBase ttb = GetTile(ringTile);
+					if (ttb == null)
 						continue;
-					List<Vector3Int> newRegion = GetRegionTiles(coords);
-					foreach (Vector3Int regionCoord in newRegion)
-						mapFlags[regionCoord] = true;
-					regions.Add(newRegion);
+
+					ringEmpty = false;
+
+					if (mapFlags.TryGetValue(ringTile, out bool searched) == true && searched == true)
+						continue;
+
+					if (ttb.type == regionType)
+					{
+						List<Vector3Int> newRegion = GetRegionTiles(ringTile);
+						foreach (Vector3Int coord in newRegion)
+							mapFlags[coord] = true;
+
+						regions.Add(newRegion);
+					}
 				}
 			}
 
@@ -375,7 +443,7 @@ namespace AtomosZ.BoMII.Terrain
 			TerrainTileBase.TerrainType tileType = GetTile(startCoordinates).type;
 
 			Queue<Vector3Int> queue = new Queue<Vector3Int>();
-			queue.Enqueue(startCoordinates); // these are NOT offset, ie not world coords (start from 0,0, positive only)
+			queue.Enqueue(startCoordinates);
 
 			mapFlags[startCoordinates] = true;
 
