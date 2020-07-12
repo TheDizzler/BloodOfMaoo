@@ -1,12 +1,11 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace AtomosZ.BoMII.Terrain
+namespace AtomosZ.BoMII.Terrain.Generation
 {
 	[CustomEditor(typeof(HexMapGenerator))]
 	public class HexMapGeneratorEditor : Editor
 	{
-
 		public override void OnInspectorGUI()
 		{
 			HexMapGenerator mapGen = (HexMapGenerator)target;

@@ -5,7 +5,7 @@ using UnityEngine.Tilemaps;
 using static AtomosZ.BoMII.Terrain.HexTools;
 using Debug = UnityEngine.Debug;
 
-namespace AtomosZ.BoMII.Terrain
+namespace AtomosZ.BoMII.Terrain.Generation
 {
 	/// <summary>
 	/// Unity uses Offset Coordinates for hex maps.
