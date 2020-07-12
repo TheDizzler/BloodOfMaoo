@@ -58,6 +58,7 @@ namespace AtomosZ.BoMII.Terrain
 		private TerrainTileBase startTile;
 		private TerrainTileBase currentTile;
 		private List<Vector3Int> lastLine = new List<Vector3Int>();
+		private List<Vector3Int> lastRadius = new List<Vector3Int>();
 
 
 		void Start()
@@ -85,6 +86,9 @@ namespace AtomosZ.BoMII.Terrain
 					foreach (Vector3Int lineTile in lastLine)
 						tilemap.SetColor(lineTile, Color.white);
 					lastLine.Clear();
+					foreach (Vector3Int radiusTile in lastRadius)
+						tilemap.SetColor(radiusTile, Color.white);
+					lastRadius.Clear();
 
 					if (Input.GetMouseButtonUp(0))
 					{
@@ -92,13 +96,24 @@ namespace AtomosZ.BoMII.Terrain
 					}
 					else
 					{
+						int n = HexTools.DistanceInTiles(startTile.coordinates, tilepoint);
+						List<Vector3Int> radius = HexTools.GetTilesInRange(startTile.coordinates, n);
 						List<Vector3Int> line = HexTools.GetLine(startTile.coordinates, tilepoint);
-						foreach (Vector3Int lineTile in line)
+
+						foreach (Vector3Int radiusTile in radius)
 						{
-							tilemap.SetColor(lineTile, Color.yellow);
+							tilemap.SetColor(radiusTile, Color.yellow);
 						}
 
+						foreach (Vector3Int lineTile in line)
+						{
+							tilemap.SetColor(lineTile, Color.magenta);
+						}
+
+						
+
 						lastLine = line;
+						lastRadius = radius;
 					}
 				}
 				else
@@ -298,12 +313,21 @@ namespace AtomosZ.BoMII.Terrain
 			List<Vector3Int> line = HexTools.GetLine(tileA, tileB);
 			foreach (Vector3Int tileCoord in line)
 			{
-				tilemap.SetColor(tileCoord, Color.red);
+				ChangeTilesAround(tileCoord, passageSize, whiteTile);
 			}
-
-
 		}
 
+		private void ChangeTilesAround(Vector3Int center, int radius, TerrainTileBase newType)
+		{
+			List<Vector3Int> tiles = HexTools.GetTilesInRange(center, radius - 1);
+			foreach (Vector3Int tile in tiles)
+			{
+				TerrainTileBase ttb = GetTile(tile);
+				if (tile == null)
+					continue;
+				CreateAndSetTile(tile, newType, ttb);
+			}
+		}
 
 		private List<List<Vector3Int>> GetRegions(TerrainTileBase.TerrainType regionType)
 		{

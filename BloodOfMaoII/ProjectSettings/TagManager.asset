@@ -8,6 +8,7 @@ TagManager:
   - TerrainTileMap
   - GenesisTile
   - TileSpawnPoint
+  - HexMapGenerator
   layers:
   - Default
   - TransparentFX

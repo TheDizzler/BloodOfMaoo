@@ -6,7 +6,12 @@ namespace AtomosZ.BoMII.Terrain
 {
 	/// <summary>
 	/// Special thanks to Amit Patel for https://www.redblobgames.com/grids/hexagons/
-	/// Notes: Unity uses odd-q.
+	/// Notes:
+	///		Unity uses odd-q.
+	///		Due to the overwhelming use of cube coordinates in these functions
+	///			(I believe there more effecient as well?) it may be prudent to
+	///			store the cube coordinates in the tiles, instead of converting
+	///			every time needed.
 	/// </summary>
 	public static class HexTools
 	{
@@ -19,6 +24,39 @@ namespace AtomosZ.BoMII.Terrain
 		/// "nudge" the line in one direction to avoid landing on side boundaries.
 		/// </summary>
 		public static readonly Vector3 epsilonCube = new Vector3(1E-6f, 2E-6f, -3E-6f);
+
+		public static readonly Dictionary<TerrainTileBase.Cardinality, Vector3Int> cubeDirections
+			= new Dictionary<TerrainTileBase.Cardinality, Vector3Int>()
+		{
+			{TerrainTileBase.Cardinality.N,  new Vector3Int( 0,  1, -1) },
+			{TerrainTileBase.Cardinality.NW, new Vector3Int(-1,  1,  0) },
+			{TerrainTileBase.Cardinality.SW, new Vector3Int(-1,  0,  1) },
+			{TerrainTileBase.Cardinality.S,  new Vector3Int( 0, -1,  1) },
+			{TerrainTileBase.Cardinality.SE, new Vector3Int( 1, -1,  0) },
+			{TerrainTileBase.Cardinality.NE, new Vector3Int( 1,  0, -1) },
+		};
+
+
+		/// <summary>
+		/// Returns a "circle" of tiles that are within the range and center specified.
+		/// </summary>
+		/// <param name="center"></param>
+		/// <param name="range"></param>
+		/// <returns></returns>
+		public static List<Vector3Int> GetTilesInRange(Vector3Int center, int range)
+		{
+			List<Vector3Int> tiles = new List<Vector3Int>();
+			for (int x = -range; x <= range; ++x)
+			{
+				for (int y = Math.Max(-range, -x - range); y <= Math.Min(range, -x + range); ++y)
+				{
+					int z = -x - y;
+					tiles.Add(CubeToOffset(OffsetToCube(center) + new Vector3Int(x, y, z)));
+				}
+			}
+
+			return tiles;
+		}
 
 		/// <summary>
 		/// Gets all hexes in-between two offset coordinate hexes.
