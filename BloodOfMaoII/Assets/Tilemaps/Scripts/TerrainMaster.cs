@@ -1,15 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
-using AtomosZ.BoMII.Terrain.Generators;
+using AtomosZ.BoMII.Terrain.Generation;
 using UnityEngine;
 using UnityEngine.Tilemaps;
+using static AtomosZ.BoMII.Terrain.HexTools;
 using static AtomosZ.BoMII.Terrain.TerrainTileBase;
 
 namespace AtomosZ.BoMII.Terrain
 {
 	public class TerrainMaster : MonoBehaviour
 	{
-		[SerializeField] private EndlessTerrain terrain = null;
+		//[SerializeField] private EndlessTerrain terrain = null;
 		// tilemap related variables
 		public Tilemap tilemap = null;
 		[SerializeField] private GenesisTile genesis = null;
@@ -77,10 +78,19 @@ namespace AtomosZ.BoMII.Terrain
 		{
 			Vector3Int mappos = tilemap.WorldToCell(worldPos);
 			worldPos = tilemap.CellToWorld(mappos);
+
+			//float height = terrain.GetHeightAtWorld(worldPos);
+			//Debug.Log(worldPos + " height: " + height);
+
+			//GenerateRandomTiles(worldPos, radius);
+		}
+
+
+
+		private void GenerateRandomTiles(Vector3 worldPos, int radius)
+		{
 			List<SpawnTile> spawners = new List<SpawnTile>();
 			spawners.Add(Instantiate(spawnTilePrefab, worldPos, Quaternion.identity, this.transform));
-
-
 
 			int r = 0;
 			if (r < radius)
@@ -106,13 +116,10 @@ namespace AtomosZ.BoMII.Terrain
 				}
 				else
 				{
-					spawner.SpawnSelf(tilemap, terrainTiles[UnityEngine.Random.Range(0, 2)]);
+					spawner.SpawnSelf(tilemap, terrainTiles[UnityEngine.Random.Range(0, terrainTiles.Length)]);
 				}
 			}
-
-			//StartCoroutine(StartSimulation(spawners, mappos));
 		}
-
 
 		private List<SpawnTile> CreateSpawnersAround(List<SpawnTile> subspawners)
 		{
