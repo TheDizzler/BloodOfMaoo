@@ -54,6 +54,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		public GameObject locTextPrefab;
 		public Transform textHolder;
 
+		public int revealRadius = 5;
 
 		public Tilemap tilemap = null;
 		public List<Region> regions = new List<Region>();
@@ -66,6 +67,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		private List<Vector3Int> lastLine = new List<Vector3Int>();
 		private List<Vector3Int> lastRadius = new List<Vector3Int>();
 		private List<Vector3Int> lastRing = new List<Vector3Int>();
+		private Vector3 tilemapScale;
 
 		void Start()
 		{
@@ -135,13 +137,17 @@ namespace AtomosZ.BoMII.Terrain.Generation
 						lastRing = ring;
 					}
 				}
+				if (tile == null && Input.GetMouseButtonDown(0))
+				{
+					RevealArea(tilepoint, revealRadius);
+				}
 				else
 				{
 					if (tile != null)
 					{
 						if (Input.GetMouseButtonDown(0))
 						{
-							Debug.Log("Coords: " + tilepoint);
+							Debug.Log("World: " + worldpoint + " Coords: " + tilepoint);
 							startTile = tile;
 						}
 					}
@@ -191,6 +197,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		{
 			tilemap.ClearAllTiles();
 			regions.Clear();
+			tilemapScale = GameObject.FindGameObjectWithTag(Tags.TerrainTilemap).transform.localScale;
 
 			for (int i = textHolder.childCount - 1; i >= 0; --i)
 			{
@@ -356,7 +363,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		}
 
 		/// <summary>
-		/// Out of curiosity, did performance test between 3 region-gathering methods:
+		/// Out of curiosity, did benchmarkd between 3 region-gathering methods:
 		///		Array - start at (0,0), convert to offset coordinates
 		///		Ring - get rings around (0,0,0)
 		///		TilesBlock - use tilemap.GetTilesBlock() to get all cells in tilemap.cellbounds
@@ -597,6 +604,37 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			return tileLoc;
 		}
 
+		public void RevealArea(Vector3Int revealCenter, int radius)
+		{
+			float[,] noiseMap = Noise.GenerateNoiseMap(
+				radius , radius,
+				noiseSettings, new Vector2(revealCenter.y, -revealCenter.x));
+			
+			for (int x = 0; x < noiseMap.GetLength(0); ++x)
+			{
+				for (int y = 0; y < noiseMap.GetLength(1); ++y)
+				{
+					Vector3Int coord = revealCenter
+						+ new Vector3Int(
+							Mathf.CeilToInt(-noiseMap.GetLength(1) * .5f) + y,
+							Mathf.CeilToInt(-noiseMap.GetLength(0) * .5f) + x, 0);
+
+					if (GetTile(coord) != null)
+						continue;
+
+					if (noiseMap[x, y] > randomFillPercent * .01f)
+						CreateAndSetTile(coord, whiteTile);
+					else
+						CreateAndSetTile(coord, blackTile);
+				}
+			}
+
+			for (int i = 0; i < smoothSteps; ++i)
+			{
+				if (!SmoothMap(revealCenter, radius))
+					break;
+			}
+		}
 
 		private void NoiseFillMap()
 		{
@@ -604,13 +642,13 @@ namespace AtomosZ.BoMII.Terrain.Generation
 				width, height,
 				noiseSettings, Vector2.zero);
 
-			for (int x = 0; x < width; ++x)
+			for (int x = 0; x < noiseMap.GetLength(0); ++x)
 			{
-				for (int y = 0; y < height; ++y)
+				for (int y = 0; y < noiseMap.GetLength(1); ++y)
 				{
 					Vector3Int coord = ArrayToOffsetCoords(x, y);
 
-					if (noiseMap[x,y] > randomFillPercent * .01f)
+					if (noiseMap[x, y] > randomFillPercent * .01f)
 						CreateAndSetTile(coord, whiteTile);
 					else
 						CreateAndSetTile(coord, blackTile);
@@ -655,6 +693,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 					newObj.transform.position = worldPoint;
 					newObj.transform.SetParent(textHolder, true);
 					TextMeshPro text = newObj.GetComponent<TextMeshPro>();
+					text.transform.localScale = tilemapScale * .5f;
 					text.name = coord.ToString();
 					text.SetText(coord.ToString() + "\n" + HexTools.OffsetToCube(coord));
 					newTile.text = text;
@@ -675,7 +714,12 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			return newTile;
 		}
 
-
+		/// <summary>
+		/// Can only be used at initial map generation.
+		/// </summary>
+		/// <param name="x"></param>
+		/// <param name="y"></param>
+		/// <returns></returns>
 		private Vector3Int ArrayToOffsetCoords(int x, int y)
 		{
 			return new Vector3Int(

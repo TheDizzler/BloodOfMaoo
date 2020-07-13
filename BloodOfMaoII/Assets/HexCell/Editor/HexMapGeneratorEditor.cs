@@ -23,6 +23,13 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 			if (GUILayout.Button("Clear Tile Map"))
 				mapGen.ClearMap();
+
+			if (GUILayout.Button("Expand"))
+			{
+				mapGen.RevealArea(new Vector3Int(40, -50, 0), 50);
+			}
+
+
 		}
 	}
 }
