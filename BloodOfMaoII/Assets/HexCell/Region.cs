@@ -14,6 +14,7 @@ namespace AtomosZ.BoMII.Terrain
 		public List<Vector3Int> tileCoords;
 		public List<Vector3Int> edgeTiles;
 		public List<Region> connectedRegions;
+		public Dictionary<Vector3Int, Passageway> tileWithPassage;
 		public int regionSize;
 		public bool isAccessibleFromMainRegion;
 		public bool isMainRegion;
@@ -27,6 +28,7 @@ namespace AtomosZ.BoMII.Terrain
 
 			connectedRegions = new List<Region>();
 			edgeTiles = new List<Vector3Int>();
+			tileWithPassage = new Dictionary<Vector3Int, Passageway>();
 
 			HexMapGenerator mapGenerator = GameObject.FindGameObjectWithTag(Tags.HexMapGenerator).GetComponent<HexMapGenerator>();
 			regionType = mapGenerator.GetTile(regionTileCoords[0]).type;
@@ -50,7 +52,7 @@ namespace AtomosZ.BoMII.Terrain
 		public Region() { }
 
 
-		public static void ConnectRegions(Region regionA, Region regionB)
+		public static void ConnectRegions(Region regionA, Region regionB, Passageway passageway)
 		{
 			if (regionA.isAccessibleFromMainRegion)
 				regionB.SetAccessibleFromMainRegion();
@@ -59,6 +61,8 @@ namespace AtomosZ.BoMII.Terrain
 
 			regionA.connectedRegions.Add(regionB);
 			regionB.connectedRegions.Add(regionA);
+			regionA.tileWithPassage[passageway.passageTiles[0]] = passageway;
+			regionB.tileWithPassage[passageway.passageTiles[passageway.passageTiles.Count -1]] = passageway;
 		}
 
 		public bool IsConnected(Region otherRegion)
@@ -80,5 +84,26 @@ namespace AtomosZ.BoMII.Terrain
 					connectedRoom.SetAccessibleFromMainRegion();
 			}
 		}
+	}
+
+	/// <summary>
+	/// A sort of region that connects to major regions.
+	/// </summary>
+	public class Passageway
+	{
+		public TerrainTileBase.TerrainType regionType;
+		public List<Vector3Int> passageTiles;
+		public Region regionA;
+		public Region regionB;
+
+
+		public Passageway(Region regionA, Region regionB, Vector3Int tileA, Vector3Int tileB, List<Vector3Int> line)
+		{
+			regionType = regionA.regionType;
+			this.regionA = regionA;
+			this.regionB = regionB;
+			passageTiles = line;
+		}
+
 	}
 }

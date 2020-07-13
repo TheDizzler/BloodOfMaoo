@@ -15,7 +15,11 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		public static float outerRadius = 10f;
 		public static float innerRadius = outerRadius * 0.866025404f;
 
+		[Tooltip("When using noisemap, to keep reuslt consistent when growing, always keep the " +
+			"width/height odd or even")]
 		public int width;
+		[Tooltip("When using noisemap, to keep result consistent when growing, always keep the " +
+			"width/height odd or even")]
 		public int height;
 		[Tooltip("Minimum neighbours 4:\n\t40 to 45: Large caverns.\n\t45 to 50: caves." +
 			"\n\t50 to 55: small caves & rooms.\n\t55 to 60: small rooms." +
@@ -52,6 +56,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 
 		public Tilemap tilemap = null;
+		public List<Region> regions = new List<Region>();
 
 		private Camera cam = null;
 		private Vector3 cellsize;
@@ -185,6 +190,8 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		public void GenerateMap()
 		{
 			tilemap.ClearAllTiles();
+			regions.Clear();
+
 			for (int i = textHolder.childCount - 1; i >= 0; --i)
 			{
 				if (Application.isPlaying)
@@ -239,6 +246,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			survivingRegions[0].isAccessibleFromMainRegion = true;
 
 			ConnectClosestRegions(survivingRegions);
+			regions = survivingRegions;
 		}
 
 		private void ConnectClosestRegions(List<Region> allRegions, bool forceAccessibilityFromMainRegion = false)
@@ -323,10 +331,12 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 		private void CreatePassage(Region regionA, Region regionB, Vector3Int tileA, Vector3Int tileB)
 		{
-			Region.ConnectRegions(regionA, regionB);
-			Debug.DrawLine(tilemap.CellToWorld(tileA), tilemap.CellToWorld(tileB), Color.green, 10);
-
 			List<Vector3Int> line = HexTools.GetLine(tileA, tileB);
+			Passageway passageway = new Passageway(regionA, regionB, tileA, tileB, line);
+
+			Region.ConnectRegions(regionA, regionB, passageway);
+			//Debug.DrawLine(tilemap.CellToWorld(tileA), tilemap.CellToWorld(tileB), Color.green, 10);
+
 			foreach (Vector3Int tileCoord in line)
 			{
 				ChangeTilesAround(tileCoord, passageSize, whiteTile);
