@@ -17,10 +17,8 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 		[Tooltip("When using noisemap, to keep reuslt consistent when growing, always keep the " +
 			"width/height odd or even")]
-		public int width;
-		[Tooltip("When using noisemap, to keep result consistent when growing, always keep the " +
-			"width/height odd or even")]
-		public int height;
+		public int initialViewRadius = 40;
+
 		[Tooltip("Minimum neighbours 4:\n\t40 to 45: Large caverns.\n\t45 to 50: caves." +
 			"\n\t50 to 55: small caves & rooms.\n\t55 to 60: small rooms." +
 			"\n\tValues below 30 are too open and above 60 are to filled.")]
@@ -168,17 +166,6 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			return tilemap.GetTile<TerrainTileBase>(offsetGridCoords);
 		}
 
-		/// <summary>
-		/// WARNING: This is probably not going to be dangerous after map gen.
-		/// Use GetTile(Vector3Int offsetGridCoords) instead.
-		/// </summary>
-		/// <param name="x"></param>
-		/// <param name="y"></param>
-		/// <returns></returns>
-		public TerrainTileBase GetTile(int x, int y)
-		{
-			return tilemap.GetTile<TerrainTileBase>(ArrayToOffsetCoords(x, y));
-		}
 
 		public void ClearMap()
 		{
@@ -208,7 +195,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			}
 
 			if (useNoise)
-				NoiseFillMap();
+				FillMapArea(Vector3Int.zero, initialViewRadius);
 			else
 				RandomFillMap();
 
@@ -604,30 +591,10 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			return tileLoc;
 		}
 
+
 		public void RevealArea(Vector3Int revealCenter, int radius)
 		{
-			float[,] noiseMap = Noise.GenerateNoiseMap(
-				radius , radius,
-				noiseSettings, new Vector2(revealCenter.y, -revealCenter.x));
-			
-			for (int x = 0; x < noiseMap.GetLength(0); ++x)
-			{
-				for (int y = 0; y < noiseMap.GetLength(1); ++y)
-				{
-					Vector3Int coord = revealCenter
-						+ new Vector3Int(
-							Mathf.CeilToInt(-noiseMap.GetLength(1) * .5f) + y,
-							Mathf.CeilToInt(-noiseMap.GetLength(0) * .5f) + x, 0);
-
-					if (GetTile(coord) != null)
-						continue;
-
-					if (noiseMap[x, y] > randomFillPercent * .01f)
-						CreateAndSetTile(coord, whiteTile);
-					else
-						CreateAndSetTile(coord, blackTile);
-				}
-			}
+			FillMapArea(revealCenter, radius);
 
 			for (int i = 0; i < smoothSteps; ++i)
 			{
@@ -636,17 +603,24 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			}
 		}
 
-		private void NoiseFillMap()
+
+		public void FillMapArea(Vector3Int spawnCenter, int radius)
 		{
 			float[,] noiseMap = Noise.GenerateNoiseMap(
-				width, height,
-				noiseSettings, Vector2.zero);
+				radius * 2, radius * 2,
+				noiseSettings, new Vector2(spawnCenter.y, -spawnCenter.x));
 
 			for (int x = 0; x < noiseMap.GetLength(0); ++x)
 			{
 				for (int y = 0; y < noiseMap.GetLength(1); ++y)
 				{
-					Vector3Int coord = ArrayToOffsetCoords(x, y);
+					Vector3Int coord = spawnCenter
+						+ new Vector3Int(
+							Mathf.CeilToInt(-noiseMap.GetLength(1) * .5f) + y,
+							Mathf.CeilToInt(-noiseMap.GetLength(0) * .5f) + x, 0);
+
+					if (GetTile(coord) != null || HexTools.DistanceInTiles(coord, spawnCenter) > radius)
+						continue;
 
 					if (noiseMap[x, y] > randomFillPercent * .01f)
 						CreateAndSetTile(coord, whiteTile);
@@ -660,13 +634,13 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		{
 			System.Random rng = new System.Random(noiseSettings.GetSeed());
 
-			for (int x = 0; x < width; ++x)
+			for (int x = 0; x < initialViewRadius; ++x)
 			{
-				for (int y = 0; y < height; ++y)
+				for (int y = 0; y < initialViewRadius; ++y)
 				{
 					Vector3Int coord = ArrayToOffsetCoords(x, y);
 
-					if (y == 0 || x == 0 || y == height - 1 || x == width - 1
+					if (y == 0 || x == 0 || y == initialViewRadius - 1 || x == initialViewRadius - 1
 						|| rng.Next(0, 100) < randomFillPercent)
 					{
 						CreateAndSetTile(coord, blackTile);
@@ -723,21 +697,16 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		private Vector3Int ArrayToOffsetCoords(int x, int y)
 		{
 			return new Vector3Int(
-						Mathf.CeilToInt(-height * .5f) + y,
-						Mathf.CeilToInt(-width * .5f) + x, 0);
-		}
-
-		private bool IsInMapRange(int x, int y)
-		{
-			return x >= 0 && y >= 0 && x < width && y < height;
+						Mathf.CeilToInt(-initialViewRadius * .5f) + y,
+						Mathf.CeilToInt(-initialViewRadius * .5f) + x, 0);
 		}
 
 
 		private void DebugWallCount()
 		{
-			for (int x = 0; x < width; ++x)
+			for (int x = 0; x < initialViewRadius; ++x)
 			{
-				for (int y = 0; y < height; ++y)
+				for (int y = 0; y < initialViewRadius; ++y)
 				{
 					Vector3Int coords = ArrayToOffsetCoords(x, y);
 					TerrainTileBase centerTile = tilemap.GetTile<TerrainTileBase>(coords);
