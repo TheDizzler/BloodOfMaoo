@@ -15,10 +15,12 @@ namespace AtomosZ.BoMII.Terrain
 		/// Height evaluated from Noise Map.
 		/// </summary>
 		[HideInInspector] public float height;
+		[HideInInspector] public Region region;
 
 		/// <summary>
 		/// For debugging.
 		/// </summary>
 		[HideInInspector] public TextMeshPro text;
+		
 	}
 }

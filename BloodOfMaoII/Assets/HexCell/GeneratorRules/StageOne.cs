@@ -6,17 +6,19 @@ namespace AtomosZ.BoMII.Terrain.Generation
 {
 	public static class StageOne
 	{
-		public static HexMapGenerator mapGen;
+		public static float[,] noiseMap;
+
+		private static HexMapGenerator mapGen;
 		private static StageOneRules rules;
+		
 
-
-		public static void RunGeneration(HexMapGenerator hexMapGenerator)
+		public static Dictionary<TerrainType, List<Region>> RunGeneration(HexMapGenerator hexMapGenerator)
 		{
 			mapGen = hexMapGenerator;
 			rules = mapGen.stageOne;
 
 			if (rules.useNoise)
-				FillMapArea(Vector3Int.zero, mapGen.initialViewRadius);
+				FillMapArea(Vector3Int.zero, rules.initialViewRadius);
 			else
 				RandomFillMap();
 
@@ -27,45 +29,48 @@ namespace AtomosZ.BoMII.Terrain.Generation
 					break;
 			}
 
-			ProcessMap();
+			return ProcessMap();
 		}
 
 
-		private static void ProcessMap()
+		private static Dictionary<TerrainType, List<Region>> ProcessMap()
 		{
-			List<List<Vector3Int>> waterRegions = mapGen.GetRegions(TerrainType.WaterGeneration);
-			TerrainData waterData = mapGen.GetTerrainData(TerrainType.WaterGeneration);
+			Dictionary<TerrainType, List<Region>> regionDict = new Dictionary<TerrainType, List<Region>>();
+
+			TerrainData waterData = mapGen.GetTerrainData(TerrainType.WaterGenerator);
+			TerrainData landData = mapGen.GetTerrainData(TerrainType.LandGenerator);
+			List<List<Vector3Int>> waterRegions = mapGen.GetRegions(TerrainType.WaterGenerator);
+			List<Region> survivinWaterRegions = new List<Region>();
 
 			foreach (List<Vector3Int> waterRegion in waterRegions)
-				if (waterRegion.Count < waterData.thresholdSize)
-					foreach (Vector3Int coord in waterRegion)
-						mapGen.CreateAndSetTile(coord, waterData.tile, mapGen.GetTile(coord));
+				survivinWaterRegions.Add(new Region(waterRegion));
 
-
-			List<List<Vector3Int>> landRegions = mapGen.GetRegions(TerrainType.LandGeneration);
-			TerrainData landData = mapGen.GetTerrainData(TerrainType.LandGeneration);
+			List<List<Vector3Int>> landRegions = mapGen.GetRegions(TerrainType.LandGenerator);
 			List<Region> survivingLandRegions = new List<Region>();
 
 			foreach (List<Vector3Int> landRegion in landRegions)
 			{
-				if (landRegion.Count < landData.thresholdSize)
-					foreach (Vector3Int coord in landRegion)
-						mapGen.CreateAndSetTile(coord, landData.tile, mapGen.GetTile(coord));
-				else
-					survivingLandRegions.Add(new Region(landRegion));
+				survivingLandRegions.Add(new Region(landRegion));
 			}
+
+			regionDict[TerrainType.WaterGenerator] = survivinWaterRegions;
+			regionDict[TerrainType.LandGenerator] = survivingLandRegions;
 
 			if (survivingLandRegions.Count == 0)
 			{
 				Debug.Log("Map contains no rooms!");
-				return;
+				return regionDict;
 			}
 
-			survivingLandRegions.Sort();
-			survivingLandRegions[0].isMainRegion = true;
-			survivingLandRegions[0].isAccessibleFromMainRegion = true;
+			//if (rules.allowConnectRegions)
+			//{
+			//	survivingLandRegions.Sort();
+			//	survivingLandRegions[0].isMainRegion = true;
+			//	survivingLandRegions[0].isAccessibleFromMainRegion = true;
+			//	mapGen.ConnectClosestRegions(survivingLandRegions);
+			//}
 
-			//ConnectClosestRegions(survivingRegions);
+			return regionDict;
 		}
 
 		private static bool SmoothMap(Vector3Int centerPoint, int radiusToSmooth = int.MaxValue)
@@ -92,15 +97,15 @@ namespace AtomosZ.BoMII.Terrain.Generation
 					TerrainTile[] surroundingTiles = mapGen.GetSurroundingTiles(ringTile);
 					foreach (TerrainTile tile in surroundingTiles)
 					{
-						if (tile == null || tile.terrainType == TerrainType.WaterGeneration)
+						if (tile == null || tile.terrainType == TerrainType.WaterGenerator)
 							++wallCount;
 					}
 
 
-					if (wallCount > rules.minNeighboursToTurnToWater && ttb.terrainType != TerrainType.WaterGeneration)
-						changesToMake[ttb] = TerrainType.WaterGeneration;
-					else if (wallCount < rules.minNeighboursToTurnToWater && ttb.terrainType != TerrainType.LandGeneration)
-						changesToMake[ttb] = TerrainType.LandGeneration;
+					if (wallCount > rules.minNeighboursToTurnToWater && ttb.terrainType != TerrainType.WaterGenerator)
+						changesToMake[ttb] = TerrainType.WaterGenerator;
+					else if (wallCount < rules.minNeighboursToTurnToWater && ttb.terrainType != TerrainType.LandGenerator)
+						changesToMake[ttb] = TerrainType.LandGenerator;
 				}
 			}
 
@@ -129,7 +134,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 		private static void FillMapArea(Vector3Int spawnCenter, int radius)
 		{
-			float[,] noiseMap = Noise.GenerateNoiseMap(
+			noiseMap = Noise.GenerateNoiseMap(
 				radius * 2, radius * 2,
 				mapGen.noiseSettings, new Vector2(spawnCenter.y, -spawnCenter.x));
 
@@ -155,13 +160,13 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		{
 			System.Random rng = new System.Random(mapGen.noiseSettings.GetSeed());
 
-			for (int x = 0; x < mapGen.initialViewRadius; ++x)
+			for (int x = 0; x < rules.initialViewRadius; ++x)
 			{
-				for (int y = 0; y < mapGen.initialViewRadius; ++y)
+				for (int y = 0; y < rules.initialViewRadius; ++y)
 				{
 					Vector3Int coord = ArrayToOffsetCoords(x, y);
 
-					if (y == 0 || x == 0 || y == mapGen.initialViewRadius - 1 || x == mapGen.initialViewRadius - 1
+					if (y == 0 || x == 0 || y == rules.initialViewRadius - 1 || x == rules.initialViewRadius - 1
 						|| rng.Next(0, 100) < rules.randomFillPercent)
 					{
 						mapGen.CreateAndSetTile(coord, rules.tiles[0]);
@@ -184,8 +189,8 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		private static Vector3Int ArrayToOffsetCoords(int x, int y)
 		{
 			return new Vector3Int(
-						Mathf.CeilToInt(-mapGen.initialViewRadius * .5f) + y,
-						Mathf.CeilToInt(-mapGen.initialViewRadius * .5f) + x, 0);
+						Mathf.CeilToInt(-rules.initialViewRadius * .5f) + y,
+						Mathf.CeilToInt(-rules.initialViewRadius * .5f) + x, 0);
 		}
 
 	}

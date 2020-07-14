@@ -22,6 +22,10 @@ namespace AtomosZ.BoMII.Terrain.Generation
 	[Serializable]
 	public class StageOneRules : MapGenerationRules
 	{
+		[Tooltip("When using noisemap, to keep reuslt consistent when growing, always keep the " +
+				"width/height odd or even")]
+		public int initialViewRadius = 40;
+
 		public bool useNoise;
 
 		[Tooltip("Standard square Cells: Range(3,6)" +

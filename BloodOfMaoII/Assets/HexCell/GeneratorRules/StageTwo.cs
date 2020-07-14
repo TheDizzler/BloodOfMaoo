@@ -1,18 +1,58 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
+using static AtomosZ.BoMII.Terrain.TileDefinitions;
 
-public class StageTwo : MonoBehaviour
+namespace AtomosZ.BoMII.Terrain.Generation
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+	public static class StageTwo
+	{
+		public static HexMapGenerator mapGen;
+		private static StageTwoRules rules;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+
+		public static void RunGeneration(HexMapGenerator hexMapGenerator,
+			Dictionary<TerrainType, List<Region>> regionDict)
+		{
+			mapGen = hexMapGenerator;
+			rules = mapGen.stageTwo;
+
+			//FillLandRegionsWithNoiseTerrain(regionDict[TerrainType.LandGenerator]);
+			FillLandRegionsWithRandomTerrain(regionDict[TerrainType.LandGenerator]);
+		}
+
+
+		private static void FillLandRegionsWithRandomTerrain(List<Region> regionList)
+		{
+			System.Random rng = new System.Random(mapGen.noiseSettings.GetSeed());
+
+			for (int i = 0; i < regionList.Count; ++i)
+			{
+				for (int j = 0; j < regionList[i].regionSize; ++j)
+				{
+					Vector3Int tileCoord = regionList[i].tileCoords[j];
+					int rnd = rng.Next(0, rules.tiles.Count);
+					mapGen.CreateAndSetTile(tileCoord, rules.tiles[rnd]);
+				}
+			}
+		}
+
+
+		/// <summary>
+		/// TODO: everything
+		/// </summary>
+		/// <param name="regionList"></param>
+		private static void FillLandRegionsWithNoiseTerrain(List<Region> regionList)
+		{
+			float[,] originalNoiseMap = StageOne.noiseMap;
+
+			for (int i = 0; i < regionList.Count; ++i)
+			{
+				for (int j = 0; j < regionList[i].regionSize; ++j)
+				{
+					Vector3Int tileCoord = regionList[i].tileCoords[j];
+
+				}
+			}
+		}
+	}
 }

@@ -27,10 +27,6 @@ namespace AtomosZ.BoMII.Terrain.Generation
 	/// </summary>
 	public class HexMapGenerator : MonoBehaviour
 	{
-		[Tooltip("When using noisemap, to keep reuslt consistent when growing, always keep the " +
-			"width/height odd or even")]
-		public int initialViewRadius = 40;
-
 		public TileDefinitions tileDefinitions;
 		public StageOneRules stageOne;
 		public StageTwoRules stageTwo;
@@ -187,7 +183,8 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 			tileDefinitions.terrainData.Sort();
 
-			StageOne.RunGeneration(this);
+			var regionDict = StageOne.RunGeneration(this);
+			StageTwo.RunGeneration(this, regionDict);
 			//if (useNoise)
 			//	FillMapArea(Vector3Int.zero, initialViewRadius);
 			//else
@@ -339,8 +336,8 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			{
 				Vector3Int checkTile = queue.Dequeue();
 				tiles.Add(checkTile);
-
 				TerrainTile[] surroundingTiles = GetSurroundingTiles(checkTile);
+
 				foreach (TerrainTile neighbour in surroundingTiles)
 				{
 					if (neighbour == null)

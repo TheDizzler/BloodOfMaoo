@@ -15,7 +15,7 @@ namespace AtomosZ.BoMII.Terrain
 		public enum TerrainType
 		{
 			// used for map generation
-			WaterGeneration, LandGeneration,
+			WaterGenerator, LandGenerator,
 
 			// water
 			DeepWater, Water, ShallowWater, IcyWater,

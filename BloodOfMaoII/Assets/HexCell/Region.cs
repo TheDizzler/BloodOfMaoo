@@ -37,6 +37,7 @@ namespace AtomosZ.BoMII.Terrain
 
 			foreach (Vector3Int coord in tileCoords)
 			{
+				mapGenerator.GetTile(coord).region = this;
 				TerrainTile[] surroundingTiles = mapGenerator.GetSurroundingTiles(coord);
 				foreach (TerrainTile ttb in surroundingTiles)
 				{
