@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: da22343e5ca266e48a8102f0c72a0b31, type: 3}
+  m_Name: DefaultTileDefinitions
+  m_EditorClassIdentifier: 
+  terrainData:
+  - name: Water Gen Tile
+    terrainType: 0
+    startHeight: 0
+    tile: {fileID: 11400000, guid: f1fa8c2db2af08441911b5d2f0c2a8b5, type: 2}
+    thresholdSize: 1
+  - name: Land Gen TIle
+    terrainType: 2
+    startHeight: 0.54
+    tile: {fileID: 11400000, guid: c409033bba1a06f408ce2aaab744c417, type: 2}
+    thresholdSize: 3

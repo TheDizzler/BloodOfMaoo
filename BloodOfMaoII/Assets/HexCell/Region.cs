@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using AtomosZ.BoMII.Terrain.Generation;
 using UnityEngine;
+using static AtomosZ.BoMII.Terrain.TerrainTile;
+using static AtomosZ.BoMII.Terrain.TileDefinitions;
 
 namespace AtomosZ.BoMII.Terrain
 {
@@ -10,7 +12,7 @@ namespace AtomosZ.BoMII.Terrain
 	/// </summary>
 	public class Region : IComparable<Region>
 	{
-		public TerrainTileBase.TerrainType regionType;
+		public TerrainType regionType;
 		public List<Vector3Int> tileCoords;
 		public List<Vector3Int> edgeTiles;
 		public List<Region> connectedRegions;
@@ -31,16 +33,16 @@ namespace AtomosZ.BoMII.Terrain
 			tileWithPassage = new Dictionary<Vector3Int, Passageway>();
 
 			HexMapGenerator mapGenerator = GameObject.FindGameObjectWithTag(Tags.HexMapGenerator).GetComponent<HexMapGenerator>();
-			regionType = mapGenerator.GetTile(regionTileCoords[0]).type;
+			regionType = mapGenerator.GetTile(regionTileCoords[0]).terrainType;
 
 			foreach (Vector3Int coord in tileCoords)
 			{
-				TerrainTileBase[] surroundingTiles = mapGenerator.GetSurroundingTiles(coord);
-				foreach (TerrainTileBase ttb in surroundingTiles)
+				TerrainTile[] surroundingTiles = mapGenerator.GetSurroundingTiles(coord);
+				foreach (TerrainTile ttb in surroundingTiles)
 				{
 					if (ttb == null) // should we consider the map edge to be a tile edge?
 						continue;
-					if (ttb.type != regionType)
+					if (ttb.terrainType != regionType)
 					{
 						edgeTiles.Add(coord); // if we don't break here we'll get an edge tile per face instead of per tile
 						break;
@@ -91,7 +93,7 @@ namespace AtomosZ.BoMII.Terrain
 	/// </summary>
 	public class Passageway
 	{
-		public TerrainTileBase.TerrainType regionType;
+		public TerrainType regionType;
 		public List<Vector3Int> passageTiles;
 		public Region regionA;
 		public Region regionB;

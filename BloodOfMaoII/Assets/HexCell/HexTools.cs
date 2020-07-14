@@ -41,6 +41,42 @@ namespace AtomosZ.BoMII.Terrain
 			{Cardinality.NE, new Vector3Int( 1,  0, -1) },
 		};
 
+		/// <summary>
+		/// Gets offset coordinates for all tiles surrounding input tile.
+		/// Array order is in Cardinality order.
+		/// </summary>
+		/// <param name="coordinate"></param>
+		/// <returns></returns>
+		public static Vector3Int[] GetSurroundingTilesOffset(Vector3Int coordinate)
+		{
+			Vector3Int[] coords = new Vector3Int[6];
+			for (int i = 0; i < 6; ++i)
+				coords[i] = GetAdjacentTileOffset(coordinate, (Cardinality) i);
+
+			return coords;
+		}
+
+		public static Vector3Int GetAdjacentTileOffset(Vector3Int offsetCoordinate, Cardinality cardinality)
+		{
+			switch (cardinality)
+			{
+				case Cardinality.N:
+					return offsetCoordinate + new Vector3Int(1, 0, 0);
+				case Cardinality.NE:
+					return offsetCoordinate + new Vector3Int(System.Math.Abs(offsetCoordinate.y) % 2, 1, 0);
+				case Cardinality.SE:
+					return offsetCoordinate + new Vector3Int(System.Math.Abs(offsetCoordinate.y) % 2 - 1, 1, 0);
+				case Cardinality.S:
+					return offsetCoordinate + new Vector3Int(-1, 0, 0);
+				case Cardinality.SW:
+					return offsetCoordinate + new Vector3Int(System.Math.Abs(offsetCoordinate.y) % 2 - 1, -1, 0);
+				case Cardinality.NW:
+					return offsetCoordinate + new Vector3Int(System.Math.Abs(offsetCoordinate.y) % 2, -1, 0);
+			}
+
+			return new Vector3Int(int.MinValue, int.MinValue, int.MinValue);
+		}
+
 
 		/// <summary>
 		/// Takes in offset coords and returns in offset cords.
@@ -57,7 +93,7 @@ namespace AtomosZ.BoMII.Terrain
 				return tiles;
 			}
 
-			
+
 			Vector3Int tile = OffsetToCube(center) + cubeDirections[Cardinality.SE] * radius;
 
 			for (int i = 0; i < 6; ++i)

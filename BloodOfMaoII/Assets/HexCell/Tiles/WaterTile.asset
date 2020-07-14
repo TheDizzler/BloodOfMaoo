@@ -33,8 +33,9 @@ MonoBehaviour:
     e32: 0
     e33: 1
   m_InstancedGameObject: {fileID: 0}
-  m_Flags: 1
+  m_Flags: 2
   m_ColliderType: 1
-  type: 1
+  terrainType: 0
   coordinates: {x: 0, y: 0, z: 0}
+  height: 0
   text: {fileID: 0}
