@@ -9,10 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7b82b45f7d8b4c64b91485680200ba2a, type: 3}
-  m_Name: TerrainTileBase - Mountain
+  m_Script: {fileID: 11500000, guid: 5e405424cdcc7e442b5137bb54ee46ae, type: 3}
+  m_Name: WaterTile
   m_EditorClassIdentifier: 
-  m_Sprite: {fileID: 1626862921696450523, guid: b78518a418deeaf4085fe8da88b21404,
+  m_Sprite: {fileID: -1826004209811100504, guid: b78518a418deeaf4085fe8da88b21404,
     type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_Transform:
@@ -35,3 +35,6 @@ MonoBehaviour:
   m_InstancedGameObject: {fileID: 0}
   m_Flags: 1
   m_ColliderType: 1
+  type: 1
+  coordinates: {x: 0, y: 0, z: 0}
+  text: {fileID: 0}
