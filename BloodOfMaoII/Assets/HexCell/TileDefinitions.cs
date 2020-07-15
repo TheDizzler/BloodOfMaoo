@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static AtomosZ.BoMII.Terrain.TerrainTile;
-using static AtomosZ.BoMII.Terrain.TileDefinitions;
 
 namespace AtomosZ.BoMII.Terrain
 {
@@ -21,7 +19,7 @@ namespace AtomosZ.BoMII.Terrain
 			DeepWater, Water, ShallowWater, IcyWater,
 
 			// fields
-			Dirt, Grass, Sand, Snow,
+			Dirt, Grass, Sand, Snow, Desert,
 
 			// forests
 			LightForest, DeepForest,
@@ -34,6 +32,7 @@ namespace AtomosZ.BoMII.Terrain
 		};
 
 		public List<TerrainData> terrainData;
+		public Dictionary<TerrainType, TerrainData> terrainDictionary;
 
 		private TerrainData nullData = new TerrainData();
 
@@ -50,6 +49,24 @@ namespace AtomosZ.BoMII.Terrain
 					return data;
 			return nullData;
 		}
+
+		public Dictionary<TerrainType, TerrainData> GetData()
+		{
+			if (terrainDictionary == null)
+			{
+				terrainDictionary = new Dictionary<TerrainType, TerrainData>();
+				foreach (TerrainData data in terrainData)
+				{
+					if (data.tile.terrainType != TerrainType.LandGenerator
+						|| data.tile.terrainType != TerrainType.WaterGenerator)
+					{
+						terrainDictionary[data.tile.terrainType] = data;
+					}
+				}
+			}
+
+			return terrainDictionary;
+		}
 	}
 
 
@@ -57,13 +74,16 @@ namespace AtomosZ.BoMII.Terrain
 	public struct TerrainData : IComparable<TerrainData>
 	{
 		public string name;
-		//public TerrainType terrainType;
 		public float startHeight;
-		
+
 		public TerrainTile tile;
 
+		[Tooltip("Minimun number of neighbours of the same type to guarantee not to change" +
+			" in a single generation.")]
+		public int stableMinNeighbours;
+
 		[Tooltip("Minimum size of region that can exist (will be filled in with tiles decided by generator)")]
-		public int thresholdSize;
+		public int regionThresholdSize;
 
 
 		public int CompareTo(TerrainData other)
