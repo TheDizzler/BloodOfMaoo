@@ -15,11 +15,11 @@ namespace AtomosZ.BoMII.Terrain.Generation
 				mapGen.GenerateMap();
 			}
 
-			//if (GUILayout.Button("Next Step"))
-			//{
-			//	mapGen.SmoothMap(Vector3Int.zero);
-			//	SceneView.RepaintAll();
-			//}
+			if (GUILayout.Button("Next Step"))
+			{
+				mapGen.NextGeneration();
+				SceneView.RepaintAll();
+			}
 
 			if (GUILayout.Button("Clear Tile Map"))
 				mapGen.ClearMap();

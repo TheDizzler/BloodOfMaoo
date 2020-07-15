@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Tilemaps;
 using static AtomosZ.BoMII.Terrain.HexTools;
-using static AtomosZ.BoMII.Terrain.TerrainTile;
 using static AtomosZ.BoMII.Terrain.TileDefinitions;
 using Debug = UnityEngine.Debug;
 
@@ -30,7 +28,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		public TileDefinitions tileDefinitions;
 		public StageOneRules stageOne;
 		public StageTwoRules stageTwo;
-		
+
 
 
 		[Tooltip("For heavy debugging of cells. Generation is slow. Use small maps.")]
@@ -62,7 +60,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		void Start()
 		{
 			cam = Camera.main;
-			
+
 			GenerateMap();
 		}
 
@@ -200,6 +198,10 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			//ProcessMap();
 		}
 
+		public void NextGeneration()
+		{
+			StageTwo.NextGeneration();
+		}
 
 		public TerrainTile GetTile(Vector3Int offsetGridCoords)
 		{
@@ -209,6 +211,11 @@ namespace AtomosZ.BoMII.Terrain.Generation
 		public TerrainData GetTerrainData(Vector3Int coord)
 		{
 			return tileDefinitions.GetData(GetTile(coord).terrainType);
+		}
+
+		public Dictionary<TerrainType, TerrainData> GetTerrainData()
+		{
+			return tileDefinitions.GetData();
 		}
 
 		public TerrainData GetTerrainData(TerrainType terrainType)
@@ -436,6 +443,6 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			return newTile;
 		}
 
-		
+
 	}
 }

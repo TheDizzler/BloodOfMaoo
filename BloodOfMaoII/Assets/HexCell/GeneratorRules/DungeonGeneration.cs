@@ -21,7 +21,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			TerrainData wallData = mapGen.GetTerrainData(TerrainType.DungeonWall);
 
 			foreach (List<Vector3Int> wallRegion in wallRegions)
-				if (wallRegion.Count < wallData.thresholdSize)
+				if (wallRegion.Count < wallData.regionThresholdSize)
 					foreach (Vector3Int coord in wallRegion)
 						mapGen.CreateAndSetTile(coord, rules.openTile, mapGen.GetTile(coord));
 
@@ -31,7 +31,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			List<Region> survivingRegions = new List<Region>();
 			foreach (List<Vector3Int> roomRegion in roomRegions)
 			{
-				if (roomRegion.Count < roomData.thresholdSize)
+				if (roomRegion.Count < roomData.regionThresholdSize)
 					foreach (Vector3Int coord in roomRegion)
 						mapGen.CreateAndSetTile(coord, rules.wallTile, mapGen.GetTile(coord));
 				else
