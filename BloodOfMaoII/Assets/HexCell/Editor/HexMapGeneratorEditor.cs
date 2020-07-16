@@ -30,4 +30,17 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			}
 		}
 	}
+
+	[CustomEditor(typeof(HexMesh))]
+	public class HexMeshEditor : Editor
+	{
+		public override void OnInspectorGUI()
+		{
+			DrawDefaultInspector();
+			if (GUILayout.Button("Generate Mesh"))
+			{
+				((HexMesh)target).MakeMesh();
+			}
+		}
+	}
 }
