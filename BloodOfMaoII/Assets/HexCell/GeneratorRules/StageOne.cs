@@ -10,7 +10,7 @@ namespace AtomosZ.BoMII.Terrain.Generation
 
 		private static HexMapGenerator mapGen;
 		private static StageOneRules rules;
-		
+
 
 		public static Dictionary<TerrainType, List<Region>> RunGeneration(HexMapGenerator hexMapGenerator)
 		{
@@ -124,7 +124,11 @@ namespace AtomosZ.BoMII.Terrain.Generation
 			{
 				TerrainData td = mapGen.GetTerrainData(tt.terrainType);
 				if (noiseValue >= td.startHeight)
-					return mapGen.CreateAndSetTile(coord, td.tile);
+				{
+					TerrainTile newTile = mapGen.CreateAndSetTile(coord, td.tile);
+					newTile.height = noiseValue;
+					return newTile;
+				}
 			}
 
 			Debug.LogError("Did not find a TerrainTile to match noiseValue of " + noiseValue);

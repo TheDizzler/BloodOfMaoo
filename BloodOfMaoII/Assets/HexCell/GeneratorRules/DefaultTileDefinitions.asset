@@ -19,22 +19,32 @@ MonoBehaviour:
     stableMinNeighbours: 0
     regionThresholdSize: 0
   - name: Land Gen TIle
-    startHeight: 0.54
+    startHeight: 0.5
     tile: {fileID: 11400000, guid: c409033bba1a06f408ce2aaab744c417, type: 2}
     stableMinNeighbours: 0
     regionThresholdSize: 0
-  - name: Grass
-    startHeight: 0.54
-    tile: {fileID: 11400000, guid: f5ef45f3c066c55488ac9e9862f4d799, type: 2}
-    stableMinNeighbours: 3
-    regionThresholdSize: 1
-  - name: Hill
-    startHeight: 0.54
-    tile: {fileID: 11400000, guid: 4657a493105c40b4791c1deedb9814b6, type: 2}
-    stableMinNeighbours: 0
-    regionThresholdSize: 0
   - name: Desert
-    startHeight: 0.64
+    startHeight: 0.54
     tile: {fileID: 11400000, guid: c39b0291cdb233240b2a9c984145494a, type: 2}
     stableMinNeighbours: 1
     regionThresholdSize: 1
+  - name: Grass
+    startHeight: 0.6
+    tile: {fileID: 11400000, guid: f5ef45f3c066c55488ac9e9862f4d799, type: 2}
+    stableMinNeighbours: 3
+    regionThresholdSize: 1
+  - name: Forest
+    startHeight: 0.7
+    tile: {fileID: 11400000, guid: 814b8848cf9d69641b2df2965ebc2b09, type: 2}
+    stableMinNeighbours: 2
+    regionThresholdSize: 1
+  - name: Hill
+    startHeight: 0.8
+    tile: {fileID: 11400000, guid: 4657a493105c40b4791c1deedb9814b6, type: 2}
+    stableMinNeighbours: 1
+    regionThresholdSize: 1
+  - name: Mountain
+    startHeight: 0.9
+    tile: {fileID: 11400000, guid: 4e6e9cb1a7e6dde4a96f085d0172db66, type: 2}
+    stableMinNeighbours: 0
+    regionThresholdSize: 4
