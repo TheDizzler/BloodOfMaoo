@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.Tilemaps;
 using static AtomosZ.BoMII.Terrain.HexTools;
 
-public class HexMesh : MonoBehaviour
+public class HexMeshGenerator : MonoBehaviour
 {
 	public Tilemap tilemap;
 	public TerrainTile testTile;
@@ -204,14 +204,6 @@ public class HexMesh : MonoBehaviour
 
 	public struct TileMeshData
 	{
-		//public Vector3[] vertices;
-		//public int[] indices;
-		//public Dictionary<Vector3, int> vertexCodex;
 		public Tuple<Vector3, int>[] verticeIndices;
-		//public Tuple<Vector3, int> topLeft;
-
-
-
-		//public Tuple<Vector3, int> bottomLeft;
 	}
 }
